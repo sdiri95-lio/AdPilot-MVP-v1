@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { ProjectResponse } from "@/lib/validators";
 import type { ProjectDetailResponse } from "@/types/api";
-import { cn } from "@/lib/utils";
 
 type ProfitCalculatorViewProps = {
   projectId: string;
@@ -29,7 +28,7 @@ export function ProfitCalculatorView({ projectId }: ProfitCalculatorViewProps) {
         } else {
           setError("Failed to load project details.");
         }
-      } catch (e) {
+      } catch {
         setError("Network error loading project.");
       } finally {
         setIsLoading(false);
@@ -50,8 +49,8 @@ export function ProfitCalculatorView({ projectId }: ProfitCalculatorViewProps) {
         throw new Error(data.message || "Failed to calculate profit metrics.");
       }
       setProject(data.project);
-    } catch (e: any) {
-      setError(e.message || "An unexpected error occurred.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "An unexpected error occurred.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -81,7 +80,7 @@ export function ProfitCalculatorView({ projectId }: ProfitCalculatorViewProps) {
         <div>
           <h2 className="text-xl font-medium">Profit Calculator</h2>
           <p className="text-sm text-muted-foreground">
-            Evaluate your product's financial viability and get AI-driven market assumptions.
+            Evaluate your product&apos;s financial viability and get AI-driven market assumptions.
           </p>
         </div>
         <Button onClick={handleAnalyze} disabled={isAnalyzing}>

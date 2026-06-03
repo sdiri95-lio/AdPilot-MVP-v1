@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { WinningProbabilityAnalysis } from "@prisma/client";
 import { ZodError } from "zod";
 
 import { requireCurrentUser } from "@/lib/auth";
@@ -11,7 +12,7 @@ import {
 
 const probabilityService = new WinningProbabilityService();
 
-function serializeAnalysis(analysis: any) {
+function serializeAnalysis(analysis: WinningProbabilityAnalysis) {
   return {
     ...analysis,
     reasoning: analysis.reasoning as string[],

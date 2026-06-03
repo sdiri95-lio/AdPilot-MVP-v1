@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Loader2, AlertCircle, TrendingUp, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import type { ProjectResponse } from "@/lib/validators";
 import type { ProjectDetailResponse } from "@/types/api";
 import { cn } from "@/lib/utils";
@@ -30,7 +29,7 @@ export function WinningProbabilityView({ projectId }: WinningProbabilityViewProp
         } else {
           setError("Failed to load project details.");
         }
-      } catch (e) {
+      } catch {
         setError("Network error loading project.");
       } finally {
         setIsLoading(false);
@@ -51,8 +50,8 @@ export function WinningProbabilityView({ projectId }: WinningProbabilityViewProp
         throw new Error(data.message || "Failed to calculate winning probability.");
       }
       setProject(data.project);
-    } catch (e: any) {
-      setError(e.message || "An unexpected error occurred.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "An unexpected error occurred.");
     } finally {
       setIsAnalyzing(false);
     }

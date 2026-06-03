@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { ProfitAnalysis } from "@prisma/client";
 import { ZodError } from "zod";
 
 import { requireCurrentUser } from "@/lib/auth";
@@ -10,7 +11,7 @@ import {
 
 const profitService = new ProfitCalculatorService();
 
-function serializeAnalysis(analysis: any) {
+function serializeAnalysis(analysis: ProfitAnalysis) {
   return {
     ...analysis,
     assumptions: analysis.assumptions as string[],

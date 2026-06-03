@@ -68,10 +68,10 @@ export class WinningProbabilityService {
     let riskScore = project.riskScore;
 
     if (latestAnalysis && latestAnalysis.opportunityScoreInputs) {
-      const inputs = latestAnalysis.opportunityScoreInputs as any;
-      productScore = inputs.productScore ?? productScore;
-      marketScore = inputs.marketScore ?? marketScore;
-      riskScore = inputs.riskScore ?? riskScore;
+      const inputs = latestAnalysis.opportunityScoreInputs as Record<string, unknown>;
+      productScore = (inputs.productScore as number | undefined) ?? productScore;
+      marketScore = (inputs.marketScore as number | undefined) ?? marketScore;
+      riskScore = (inputs.riskScore as "HIGH" | "MEDIUM" | "LOW" | undefined) ?? riskScore;
     }
 
     if (productScore === null || marketScore === null || riskScore === null) {

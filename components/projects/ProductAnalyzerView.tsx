@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { ProjectResponse } from "@/lib/validators";
-import type { ProjectDetailResponse, AnalyzeProductResponse } from "@/types/api";
+import type { ProjectDetailResponse } from "@/types/api";
 
 type ProductAnalyzerViewProps = {
   projectId: string;
@@ -29,7 +29,7 @@ export function ProductAnalyzerView({ projectId }: ProductAnalyzerViewProps) {
         } else {
           setError("Failed to load project details.");
         }
-      } catch (e) {
+      } catch {
         setError("Network error loading project.");
       } finally {
         setIsLoading(false);
@@ -50,8 +50,8 @@ export function ProductAnalyzerView({ projectId }: ProductAnalyzerViewProps) {
         throw new Error(data.message || "Failed to analyze product.");
       }
       setProject(data.project);
-    } catch (e: any) {
-      setError(e.message || "An unexpected error occurred.");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "An unexpected error occurred.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -110,7 +110,7 @@ export function ProductAnalyzerView({ projectId }: ProductAnalyzerViewProps) {
           </div>
           <h3 className="text-lg font-medium">No Analysis Yet</h3>
           <p className="text-sm text-muted-foreground max-w-sm mt-2 mb-6">
-            Run the product analyzer to get a detailed breakdown of your product's market potential.
+            Run the product analyzer to get a detailed breakdown of your product&apos;s market potential.
           </p>
           <Button onClick={handleAnalyze}>Start Analysis</Button>
         </Card>
