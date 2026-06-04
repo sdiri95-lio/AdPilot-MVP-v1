@@ -37,9 +37,12 @@ export async function POST(request: Request) {
   const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const path = `${user.clerkId}/${crypto.randomUUID()}.${extension}`;
 
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
   const { error } = await supabase.storage
     .from(projectImagesBucket)
-    .upload(path, file, {
+    .upload(path, buffer, {
       contentType: file.type,
       upsert: false,
     });
