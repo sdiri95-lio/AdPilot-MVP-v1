@@ -1,154 +1,124 @@
 import { z } from "zod";
-import {
-  demandLevels,
-  competitionLevels,
-  riskScores,
-  mediaBuyerReportSchema,
-} from "@/lib/validators";
 
-export const productAnalyzerAiSchema = z.object({
-  category: z.string().describe("The product category or niche."),
-  demand: z.enum(demandLevels).describe("Overall market demand level."),
-  competition: z.enum(competitionLevels).describe("Overall market competition level."),
-  emotionalTriggers: z.array(z.string()).describe("List of emotional triggers for marketing."),
-  difficultyScore: z.number().int().min(1).max(10).describe("1-10 difficulty score to sell this product."),
-  marketOpportunity: z.number().int().min(1).max(10).describe("1-10 market opportunity score."),
-  riskScore: z.enum(riskScores).describe("Overall risk score."),
-  marketScore: z.number().int().min(1).max(10).describe("1-10 market score."),
-  productScore: z.number().int().min(1).max(10).describe("1-10 product score."),
-  mediaBuyerReport: mediaBuyerReportSchema.describe("A structured report from the perspective of a senior media buyer."),
-  targetAudience: z.array(z.string()).describe("List of target audience segments (demographics, interests, behaviours)."),
-  pricingRecommendations: z.array(z.string()).describe("List of actionable pricing strategy recommendations."),
-  risks: z.array(z.string()).describe("List of key risks associated with selling this product."),
+export const productResearchSchema = z.object({
+  productIntelligence: z.object({
+    problemSolved: z.string().describe("What core problem does the product solve?"),
+    painLevel: z.number().int().min(1).max(10).describe("Pain level of the target user (1-10)"),
+    urgency: z.string().describe("Purchase urgency level (high/medium/low with explanation)"),
+    impulseVsRational: z.string().describe("Is this an impulse buy or a rational buy and why?"),
+    emotionalTriggers: z.array(z.string()).describe("Key emotional triggers driving the purchase"),
+    objections: z.array(z.string()).describe("Objections from the target user"),
+  }),
+  marketIntelligence: z.object({
+    maturity: z.string().describe("Market maturity level"),
+    competition: z.string().describe("Market competition level"),
+    demandTrend: z.string().describe("Current demand trend (growing/flat/declining)"),
+    seasonality: z.string().describe("Seasonality considerations"),
+    evergreenPotential: z.string().describe("Evergreen vs trending nature description"),
+  }),
+  customerProfile: z.object({
+    age: z.string().describe("Target demographics age group"),
+    gender: z.string().describe("Target demographics gender mix"),
+    income: z.string().describe("Target income class"),
+    lifestyle: z.string().describe("Target customer lifestyle details"),
+    painPoints: z.array(z.string()).describe("Direct pain points related to this product"),
+    dreamOutcome: z.string().describe("The customer's dream outcome after using this product"),
+    motivations: z.array(z.string()).describe("Key purchase motivations"),
+    objections: z.array(z.string()).describe("Buying objections specific to this customer profile"),
+  }),
+  marketingArsenal: z.object({
+    angles: z.array(z.string()).describe("5+ marketing angles"),
+    hooks: z.array(z.string()).describe("5+ scroll-stopping hooks"),
+    offers: z.array(z.string()).describe("High-converting offer structures"),
+    headlines: z.array(z.string()).describe("Ad headlines"),
+    creativeConcepts: z.array(z.string()).describe("Detailed creative concepts (images/videos)"),
+    landingPageStructure: z.array(z.string()).describe("Recommended landing page structure sections"),
+    upsells: z.array(z.string()).describe("Upsell product ideas"),
+    bundles: z.array(z.string()).describe("Bundle packages ideas"),
+    pricingPsychology: z.string().describe("Pricing strategy explanation"),
+  }),
+  countryAnalysis: z.object({
+    codQualityScore: z.number().int().min(0).max(100).describe("0-100 Cash-On-Delivery quality score"),
+    deliveryReliability: z.string().describe("Courier delivery reliability in target country"),
+    buyingPower: z.string().describe("Target buying power description"),
+    competitionLevel: z.string().describe("Competition level in the country"),
+    recommendedPriceRange: z.string().describe("Optimal selling price range in local currency/USD"),
+    riskLevel: z.string().describe("Country specific operational risk level"),
+    opportunityScore: z.number().int().min(0).max(100).describe("0-100 overall opportunity score"),
+  }),
+  finalRecommendation: z.object({
+    status: z.enum(["GO", "NO-GO", "CONDITIONAL"]).describe("Overall launch recommendation"),
+    score: z.number().int().min(0).max(100).describe("0-100 overall product research viability score"),
+    reasoning: z.string().describe("Detailed logical backing for status and score"),
+  }),
 });
 
-export type ProductAnalyzerAiResult = z.infer<typeof productAnalyzerAiSchema>;
+export type ProductResearchAiResult = z.infer<typeof productResearchSchema>;
 
-export const opportunityScoreAiSchema = z.object({
-  winningProbability: z.number().int().min(0).max(100).describe("0-100 probability of this product being a winning product."),
-  confidenceScore: z.number().int().min(0).max(100).describe("0-100 confidence level in the probability estimation."),
-  reasoning: z.array(z.string().min(1)).min(2).describe("List of key factors influencing the scores. Must contain at least 2 items."),
-  recommendation: z.enum(["TEST", "SKIP", "MONITOR"]).describe("Clear actionable recommendation based on the score."),
-});
-
-export type OpportunityScoreAiResult = z.infer<typeof opportunityScoreAiSchema>;
-
-export const testStrategyAiSchema = z.object({
-  scenario: z.enum(["MINIMUM", "BEST", "HIGH"]).describe("The test scenario type."),
-  campaignType: z.enum(["ABO", "CBO"]).describe("Recommended campaign structure."),
-  adsetCount: z.number().int().min(1).describe("Number of recommended adsets."),
-  budgetPerAdset: z.number().min(0).describe("Budget allocated per adset."),
-  totalBudget: z.number().min(0).describe("Total testing budget."),
-  targetingType: z.enum(["TARGET", "BROAD"]).describe("Recommended targeting approach."),
-  targetingDetails: z.record(z.any()).describe("Specific targeting configuration details (e.g. interests, age, locations)."),
-  expectedSpend: z.number().min(0).describe("Expected spend during the test phase."),
-  expectedLeads: z.number().int().min(0).describe("Expected number of leads or clicks."),
-  expectedOrders: z.number().int().min(0).describe("Expected number of purchases/orders."),
-  expectedRisk: z.enum(riskScores).describe("Risk associated with this test strategy."),
-});
-
-export type TestStrategyAiResult = z.infer<typeof testStrategyAiSchema>;
-
-export const copyGeneratorAiSchema = z.object({
-  hooks: z.array(z.string()).min(3).describe("At least 3 hook variations for the ad."),
-  headlines: z.array(z.string()).min(3).describe("At least 3 headline variations."),
-  primaryTexts: z.array(z.string()).min(2).describe("At least 2 primary text body variations."),
-  ctaVariations: z.array(z.string()).min(2).describe("At least 2 call to action variations."),
-});
-
-export type CopyGeneratorAiResult = z.infer<typeof copyGeneratorAiSchema>;
-
-export const profitCalculatorAiSchema = z.object({
-  assumptions: z.array(z.string().min(1)).min(2).describe("List of realistic assumptions and caveats about these profit margins and costs based on the African e-commerce market context."),
-});
-
-export type ProfitCalculatorAiResult = z.infer<typeof profitCalculatorAiSchema>;
-
-export const testDecisionAiSchema = z.object({
-  decision: z.enum(["RETEST", "SCALE", "KILL", "IMPORT"]).describe("The macro decision for this media buying test."),
-  confidenceScore: z.number().int().min(0).max(100).describe("0-100 confidence level in the decision."),
-  reasoning: z.string().describe("Detailed reasoning explaining why this decision was made, analyzing CTR, CPP, Delivery, and Profit."),
-  nextAction: z.string().describe("Clear, exact next operational step (e.g. 'Launch Libya test using Offer B')."),
-});
-
-export type TestDecisionAiResult = z.infer<typeof testDecisionAiSchema>;
-
-export const importExplanationAiSchema = z.object({
-  explanation: z.string().describe("Clear explanation of why the deterministic Import Readiness Score was given."),
-  strengths: z.array(z.string()).min(1).describe("Key strengths of this product's import viability."),
-  weaknesses: z.array(z.string()).min(1).describe("Key weaknesses or vulnerabilities."),
-  risks: z.array(z.string()).min(1).describe("Specific operational or capital risks."),
-  recommendedActions: z.array(z.string()).min(1).describe("Actionable next steps based on the score and data."),
-});
-
-export type ImportExplanationAiResult = z.infer<typeof importExplanationAiSchema>;
-
-export const advertisingIntelligenceAiSchema = z.object({
-  campaignHealthScore: z.number().int().min(0).max(100).describe("0-100 overall score of campaign health."),
-  overallDecision: z.enum(["SCALE", "OPTIMIZE", "RETEST", "KILL"]).describe("The macro scaling/optimization decision."),
-  confidenceScore: z.number().int().min(0).max(100).describe("0-100 confidence score in the AI analysis."),
+export const advertisingAnalysisSchema = z.object({
+  campaignHealthScore: z.number().int().min(0).max(100).describe("0-100 Campaign health score"),
+  overallDecision: z.enum(["SCALE", "OPTIMIZE", "RETEST", "KILL"]).describe("Overall operational decision"),
+  confidenceScore: z.number().int().min(0).max(100).describe("0-100 confidence score in the evaluation"),
   
+  businessIntel: z.object({
+    trueProfit: z.number().describe("Calculated Net Profit after confirmation and delivery rates"),
+    netMargin: z.number().describe("True Net Profit Margin %"),
+    breakEvenCpa: z.number().describe("Break-even Cost Per Acquisition"),
+    breakEvenCpp: z.number().describe("Break-even Cost Per Purchase"),
+    maxAcceptableCpc: z.number().describe("Maximum acceptable CPC"),
+    maxAcceptableCpm: z.number().describe("Maximum acceptable CPM"),
+    projectedMonthlyProfit: z.number().describe("Projected monthly profit run-rate"),
+  }),
+
   creativeRanking: z.array(z.object({
-    adName: z.string().describe("The name of the ad creative."),
-    rank: z.number().int().min(1).describe("Performance rank (1 being best)."),
-    status: z.enum(["WINNER", "AVERAGE", "LOSER"]).describe("Performance classification."),
-    ctr: z.number().describe("CTR (all) in %."),
-    spend: z.number().describe("Amount spent on this ad."),
-    orders: z.number().describe("Number of orders generated."),
-    insights: z.string().describe("AI insights explaining its performance.")
-  })).describe("Creative performance rankings and analysis."),
+    adName: z.string().describe("Facebook ad name"),
+    rank: z.number().int().describe("Rank position (1 is best)"),
+    ctr: z.number().describe("CTR (all) %"),
+    spend: z.number().describe("Spend amount"),
+    orders: z.number().describe("Raw Facebook orders"),
+    status: z.enum(["WINNER", "AVERAGE", "LOSER"]).describe("Creative rating"),
+    insights: z.string().describe("AI insights on creative performance"),
+  })),
 
   winningAdSets: z.array(z.object({
-    adSetName: z.string().describe("Name of the ad set."),
-    spend: z.number().describe("Amount spent."),
-    orders: z.number().describe("Orders generated."),
-    cpp: z.number().describe("Cost per purchase."),
-    roas: z.number().describe("Standard Facebook ROAS."),
-    scalingPotential: z.enum(["HIGH", "MEDIUM", "LOW"]).describe("Scaling potential rating."),
-    reason: z.string().describe("Why this ad set is considered a winner.")
-  })).describe("Successful ad sets recommended for scaling."),
+    adSetName: z.string().describe("Ad set name"),
+    spend: z.number().describe("Spend amount"),
+    orders: z.number().describe("Orders generated"),
+    cpp: z.number().describe("Cost per purchase"),
+    roas: z.number().describe("Facebook ROAS"),
+    reason: z.string().describe("AI reason for scaling recommendation"),
+  })),
 
   losingAdSets: z.array(z.object({
-    adSetName: z.string().describe("Name of the ad set."),
-    spend: z.number().describe("Amount spent."),
-    orders: z.number().describe("Orders generated."),
-    cpp: z.number().describe("Cost per purchase."),
-    roas: z.number().describe("Standard Facebook ROAS."),
-    issue: z.string().describe("Primary bottleneck identified (e.g. high CPM, low CTR)."),
-    recommendation: z.string().describe("Recommended corrective action (e.g. pause, replace creatives).")
-  })).describe("Underperforming ad sets needing optimization."),
+    adSetName: z.string().describe("Ad set name"),
+    spend: z.number().describe("Spend amount"),
+    orders: z.number().describe("Orders generated"),
+    cpp: z.number().describe("Cost per purchase"),
+    roas: z.number().describe("Facebook ROAS"),
+    issue: z.string().describe("Primary performance bottleneck"),
+    recommendation: z.string().describe("Corrective action recommendation"),
+  })),
 
   fatigueWarnings: z.array(z.object({
-    targetName: z.string().describe("Campaign, Ad Set, or Ad Name."),
-    frequency: z.number().describe("Frequency value."),
-    warningType: z.enum(["HIGH_FREQUENCY", "CPM_SPIKE", "ROAS_DROP"]).describe("Type of warning."),
-    remedy: z.string().describe("Actionable fix to resolve fatigue.")
-  })).describe("Audience and creative wear-out alerts."),
-
-  businessIntel: z.object({
-    trueProfit: z.number().describe("Calculated true profit after COD adjustments."),
-    netMargin: z.number().describe("Net margin percentage."),
-    breakEvenCpa: z.number().describe("Break-even CPA."),
-    breakEvenCpp: z.number().describe("Break-even CPP."),
-    maxAcceptableCpc: z.number().describe("Maximum CPC threshold."),
-    maxAcceptableCpm: z.number().describe("Maximum CPM threshold."),
-    projectedMonthlyProfit: z.number().describe("Projected monthly profit based on current run rate."),
-    cashFlow: z.string().describe("Cashflow status analysis and constraints.")
-  }).describe("Economics and cashflow indicators."),
+    targetName: z.string().describe("Target Campaign, Adset or Ad name"),
+    frequency: z.number().describe("Current frequency"),
+    warningType: z.string().describe("Fatigue warning type"),
+    remedy: z.string().describe("AI remedy recommendation"),
+  })),
 
   optimizationActions: z.array(z.object({
-    action: z.string().describe("The exact action to perform (e.g., 'Pause Ad Set B')."),
-    priority: z.enum(["HIGH", "MEDIUM", "LOW"]).describe("Priority order."),
-    rationale: z.string().describe("Detailed reasoning analyzing CTR, CPP, CPM, etc.")
-  })).describe("Direct operational optimization rules."),
+    action: z.string().describe("The exact action to perform"),
+    priority: z.enum(["HIGH", "MEDIUM", "LOW"]).describe("Priority order"),
+    rationale: z.string().describe("Analytical reason behind action"),
+  })),
 
   actionPlan: z.object({
-    immediate: z.array(z.string()).min(1).describe("Action items to execute today."),
-    monitor: z.array(z.string()).min(1).describe("Metrics or targets to track over next 3-7 days."),
-    scaling: z.array(z.string()).min(1).describe("Suggested horizontal/vertical scaling steps."),
-    risk: z.array(z.string()).min(1).describe("Operational/capital risk flags to manage."),
-    nextBudget: z.number().describe("Recommended daily budget for next test phase.")
-  }).describe("Strategic roadmap for next operational cycle.")
+    immediate: z.array(z.string()).describe("Actions to execute within 24 hours"),
+    monitor: z.array(z.string()).describe("Metrics to monitor closely over next 3-7 days"),
+    scaling: z.array(z.string()).describe("Scaling blueprint recommendation"),
+    risk: z.array(z.string()).describe("Logistics/ad risks to manage"),
+    nextBudget: z.number().describe("Recommended daily budget for next test phase"),
+  }),
 });
 
-export type AdvertisingIntelligenceAiResult = z.infer<typeof advertisingIntelligenceAiSchema>;
+export type AdvertisingAnalysisAiResult = z.infer<typeof advertisingAnalysisSchema>;

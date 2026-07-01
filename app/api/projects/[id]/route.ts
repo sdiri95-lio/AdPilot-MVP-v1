@@ -1,155 +1,121 @@
 import { NextResponse } from "next/server";
-
-import { requireCurrentUser } from "@/lib/auth";
+import { requireUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { projectWriteData, serializeProject } from "@/lib/projects";
-import { projectUpdateSchema } from "@/lib/validators";
+import { Prisma } from "@prisma/client";
 
-type ProjectRouteProps = {
-  params: Promise<{
-    id: string;
-  }>;
-};
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const userId = await requireUserId();
+    const { id } = await params;
 
-export async function GET(_request: Request, { params }: ProjectRouteProps) {
-  const user = await requireCurrentUser();
-
-  if (!user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
-  const project = await prisma.project.findFirst({
-    where: {
-      id,
-      userId: user.id,
-    },
-  });
-
-  if (!project) {
-    return NextResponse.json({ message: "Project not found" }, { status: 404 });
-  }
-
-  return NextResponse.json({ project: serializeProject(project) });
-}
-
-export async function PATCH(request: Request, { params }: ProjectRouteProps) {
-  const user = await requireCurrentUser();
-
-  if (!user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
-  const currentProject = await prisma.project.findFirst({
-    where: {
-      id,
-      userId: user.id,
-    },
-  });
-
-  if (!currentProject) {
-    return NextResponse.json({ message: "Project not found" }, { status: 404 });
-  }
-
-  const parsed = projectUpdateSchema.safeParse(await request.json());
-
-  if (!parsed.success) {
-    return NextResponse.json(
-      { message: "Invalid project input", errors: parsed.error.flatten() },
-      { status: 400 },
-    );
-  }
-
-  if (
-    user.subscription === "FREE_TRIAL" &&
-    currentProject.status === "ARCHIVED" &&
-    parsed.data.status === "ACTIVE"
-  ) {
-    const activeProjectCount = await prisma.project.count({
-      where: {
-        userId: user.id,
-        status: "ACTIVE",
-      },
+    const project = await prisma.project.findFirst({
+      where: { id, userId },
+      include: { codMetrics: true },
     });
 
-    const projectLimit = user.usage?.projectLimit ?? 5;
-
-    if (activeProjectCount >= projectLimit) {
-      return NextResponse.json(
-        {
-          message:
-            "Free trial project limit reached. Archive a project before restoring this one.",
-        },
-        { status: 403 },
-      );
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
+
+    return NextResponse.json({ project });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Internal Server Error";
+    return NextResponse.json({ error: msg }, { status: error instanceof Error && error.message === "Unauthorized" ? 401 : 500 });
   }
-
-  const project = await prisma.project.update({
-    where: {
-      id,
-    },
-    data: projectWriteData(parsed.data),
-  });
-
-  if (currentProject.status !== project.status) {
-    await prisma.usage.update({
-      where: {
-        userId: user.id,
-      },
-      data: {
-        activeProjectCount: await prisma.project.count({
-          where: {
-            userId: user.id,
-            status: "ACTIVE",
-          },
-        }),
-      },
-    });
-  }
-
-  return NextResponse.json({ project: serializeProject(project) });
 }
 
-export async function DELETE(_request: Request, { params }: ProjectRouteProps) {
-  const user = await requireCurrentUser();
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const userId = await requireUserId();
+    const { id } = await params;
 
-  if (!user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const project = await prisma.project.findFirst({
+      where: { id, userId },
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    await prisma.project.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Internal Server Error";
+    return NextResponse.json({ error: msg }, { status: error instanceof Error && error.message === "Unauthorized" ? 401 : 500 });
   }
+}
 
-  const { id } = await params;
-  const project = await prisma.project.findFirst({
-    where: {
-      id,
-      userId: user.id,
-    },
-  });
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const userId = await requireUserId();
+    const { id } = await params;
 
-  if (!project) {
-    return NextResponse.json({ message: "Project not found" }, { status: 404 });
-  }
+    const project = await prisma.project.findFirst({
+      where: { id, userId },
+    });
 
-  await prisma.project.delete({
-    where: {
-      id,
-    },
-  });
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
 
-  await prisma.usage.update({
-    where: {
-      userId: user.id,
-    },
-    data: {
-      activeProjectCount: await prisma.project.count({
-        where: {
-          userId: user.id,
-          status: "ACTIVE",
+    const body = await request.json();
+    const {
+      name,
+      productName,
+      productCost,
+      sellingPrice,
+      shippingCost,
+      serviceFee,
+      targetCountry,
+      productUrl,
+      status,
+      codMetrics,
+    } = body;
+
+    const projectUpdate: Prisma.ProjectUpdateInput = {};
+    if (name !== undefined) projectUpdate.name = name;
+    if (productName !== undefined) projectUpdate.productName = productName;
+    if (productCost !== undefined) projectUpdate.productCost = Number(productCost);
+    if (sellingPrice !== undefined) projectUpdate.sellingPrice = Number(sellingPrice);
+    if (shippingCost !== undefined) projectUpdate.shippingCost = Number(shippingCost);
+    if (serviceFee !== undefined) projectUpdate.serviceFee = Number(serviceFee);
+    if (targetCountry !== undefined) projectUpdate.targetCountry = targetCountry;
+    if (productUrl !== undefined) projectUpdate.productUrl = productUrl || null;
+    if (status !== undefined) projectUpdate.status = status;
+
+    if (codMetrics !== undefined) {
+      projectUpdate.codMetrics = {
+        update: {
+          confirmationRate: codMetrics.confirmationRate !== undefined ? Number(codMetrics.confirmationRate) : undefined,
+          deliveryRate: codMetrics.deliveryRate !== undefined ? Number(codMetrics.deliveryRate) : undefined,
+          returnRate: codMetrics.returnRate !== undefined ? Number(codMetrics.returnRate) : undefined,
+          shippingCost: codMetrics.shippingCost !== undefined ? Number(codMetrics.shippingCost) : undefined,
+          returnFee: codMetrics.returnFee !== undefined ? Number(codMetrics.returnFee) : undefined,
         },
-      }),
-    },
-  });
+      };
+    }
 
-  return NextResponse.json({ message: "Project deleted" });
+    const updatedProject = await prisma.project.update({
+      where: { id },
+      data: projectUpdate,
+      include: { codMetrics: true },
+    });
+
+    return NextResponse.json({ project: updatedProject });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Internal Server Error";
+    return NextResponse.json({ error: msg }, { status: error instanceof Error && error.message === "Unauthorized" ? 401 : 500 });
+  }
 }

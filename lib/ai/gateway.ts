@@ -1,141 +1,82 @@
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import { OpenRouterProvider } from "./openrouter";
-import { AIProviderConfig } from "./types";
-
-export type AIFeature =
-  | "product-analyzer"
-  | "opportunity-score"
-  | "test-strategy"
-  | "copy-generator"
-  | "profit-calculator"
-  | "test-decision"
-  | "import-explanation"
-  | "advertising-intelligence";
-
-interface AIModels {
-  primary: string;
-  fallback: string;
-}
-
-const featureModels: Record<AIFeature, AIModels> = {
-  "product-analyzer": {
-    primary: "anthropic/claude-3.5-sonnet",
-    fallback: "google/gemini-2.5-flash",
-  },
-  "opportunity-score": {
-    primary: "anthropic/claude-3.5-sonnet",
-    fallback: "openai/gpt-4o-mini",
-  },
-  "test-strategy": {
-    primary: "anthropic/claude-3.5-sonnet",
-    fallback: "google/gemini-2.5-flash",
-  },
-  "copy-generator": {
-    primary: "openai/gpt-4o-mini",
-    fallback: "google/gemini-2.5-flash",
-  },
-  "profit-calculator": {
-    primary: "anthropic/claude-3.5-sonnet",
-    fallback: "google/gemini-2.5-flash",
-  },
-  "test-decision": {
-    primary: "anthropic/claude-3.5-sonnet",
-    fallback: "google/gemini-2.5-flash",
-  },
-  "import-explanation": {
-    primary: "anthropic/claude-3.5-sonnet",
-    fallback: "google/gemini-2.5-flash",
-  },
-  "advertising-intelligence": {
-    primary: "anthropic/claude-3.5-sonnet",
-    fallback: "google/gemini-2.5-flash",
-  },
-};
 
 export class AIGateway {
-  private provider: OpenRouterProvider;
-
-  constructor() {
-    this.provider = new OpenRouterProvider();
-  }
-
-  private async logUsage(
-    userId: string,
-    feature: string,
-    model: string,
-    usage: { promptTokens: number; completionTokens: number; totalTokens: number }
-  ) {
-    try {
-      await prisma.aIUsageLog.create({
-        data: {
-          userId,
-          feature,
-          model,
-          tokensInput: usage.promptTokens,
-          tokensOutput: usage.completionTokens,
-          totalTokens: usage.totalTokens,
-        },
-      });
-
-      await prisma.usage.update({
-        where: { userId },
-        data: {
-          aiCallsUsed: { increment: 1 },
-        },
-      });
-    } catch (error) {
-      console.error("Failed to log AI usage:", error);
-    }
-  }
-
-  async generate<T extends z.ZodTypeAny>(params: {
+  async generate<T extends z.ZodType>({
+    userId,
+    feature,
+    systemPrompt,
+    userPrompt,
+    schema,
+  }: {
     userId: string;
-    feature: AIFeature;
+    feature: string;
     systemPrompt: string;
     userPrompt: string;
     schema: T;
   }): Promise<z.infer<T>> {
-    const models = featureModels[params.feature];
-    let attempts = 0;
-    const maxRetries = 1; // Retry once if validation fails
-    
-    const config: AIProviderConfig = {
-      model: models.primary,
-      systemPrompt: params.systemPrompt,
-      userPrompt: params.userPrompt,
-      responseFormat: "json_object",
-    };
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      throw new Error("Missing OPENROUTER_API_KEY");
+    }
 
-    while (attempts <= maxRetries) {
+    // Claude 3.5 Sonnet as primary, Gemini 2.5 Flash as fallback
+    const models = [
+      "anthropic/claude-3.5-sonnet",
+      "google/gemini-2.5-flash",
+    ];
+
+    let lastError: unknown = null;
+
+    for (const model of models) {
       try {
-        const response = await this.provider.generate(config);
+        console.log(`[AI Gateway] Attempting generation with model ${model} for feature ${feature} (user: ${userId})...`);
         
-        if (!response.content) {
-          throw new Error("Empty response from AI provider.");
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+            "HTTP-Referer": "https://adpilot.africa",
+            "X-Title": "AdPilot Africa",
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: `${userPrompt}\n\nIMPORTANT: You MUST respond with a raw JSON object that strictly matches the expected JSON structure. Do not wrap the JSON in code blocks, markdown formatting, or explain anything else.` },
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.1,
+          }),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`OpenRouter API error (${response.status}): ${errText}`);
         }
 
-        const parsedJson = JSON.parse(response.content);
-        const validatedData = params.schema.parse(parsedJson);
-
-        // Success, log usage
-        await this.logUsage(params.userId, params.feature, config.model, response.usage);
-
-        return validatedData;
-      } catch (error) {
-        console.error(`AI Generation attempt ${attempts + 1} failed for ${params.feature}:`, error);
-        attempts++;
-        
-        if (attempts > maxRetries && config.model === models.primary) {
-          console.warn(`Falling back to ${models.fallback} for ${params.feature}...`);
-          config.model = models.fallback;
-          attempts = 0; // reset attempts for the fallback model
-        } else if (attempts > maxRetries) {
-          throw new Error(`AI generation failed after retries and fallback for ${params.feature}.`);
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (!content) {
+          throw new Error("Empty response content from OpenRouter");
         }
+
+        const cleanContent = content.trim().replace(/^```json\s*/i, "").replace(/```$/, "").trim();
+        const parsedJson = JSON.parse(cleanContent);
+        
+        const validated = schema.safeParse(parsedJson);
+        if (!validated.success) {
+          console.error(`[AI Gateway] Zod validation failed for model ${model}:`, validated.error);
+          throw new Error(`JSON schema validation failed: ${validated.error.message}`);
+        }
+
+        return validated.data;
+      } catch (err: unknown) {
+        console.warn(`[AI Gateway] Attempt with ${model} failed:`, err);
+        lastError = err;
       }
     }
 
-    throw new Error("Unexpected end of AI generation loop.");
+    throw new Error(`AI generation failed after trying all models: ${lastError instanceof Error ? lastError.message : "Unknown error"}`);
   }
 }
