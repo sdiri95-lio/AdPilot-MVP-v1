@@ -8,7 +8,9 @@ export type AIFeature =
   | "opportunity-score"
   | "test-strategy"
   | "copy-generator"
-  | "profit-calculator";
+  | "profit-calculator"
+  | "test-decision"
+  | "import-explanation";
 
 interface AIModels {
   primary: string;
@@ -33,6 +35,14 @@ const featureModels: Record<AIFeature, AIModels> = {
     fallback: "google/gemini-2.5-flash",
   },
   "profit-calculator": {
+    primary: "anthropic/claude-3.5-sonnet",
+    fallback: "google/gemini-2.5-flash",
+  },
+  "test-decision": {
+    primary: "anthropic/claude-3.5-sonnet",
+    fallback: "google/gemini-2.5-flash",
+  },
+  "import-explanation": {
     primary: "anthropic/claude-3.5-sonnet",
     fallback: "google/gemini-2.5-flash",
   },

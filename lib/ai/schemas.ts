@@ -63,3 +63,22 @@ export const profitCalculatorAiSchema = z.object({
 });
 
 export type ProfitCalculatorAiResult = z.infer<typeof profitCalculatorAiSchema>;
+
+export const testDecisionAiSchema = z.object({
+  decision: z.enum(["RETEST", "SCALE", "KILL", "IMPORT"]).describe("The macro decision for this media buying test."),
+  confidenceScore: z.number().int().min(0).max(100).describe("0-100 confidence level in the decision."),
+  reasoning: z.string().describe("Detailed reasoning explaining why this decision was made, analyzing CTR, CPP, Delivery, and Profit."),
+  nextAction: z.string().describe("Clear, exact next operational step (e.g. 'Launch Libya test using Offer B')."),
+});
+
+export type TestDecisionAiResult = z.infer<typeof testDecisionAiSchema>;
+
+export const importExplanationAiSchema = z.object({
+  explanation: z.string().describe("Clear explanation of why the deterministic Import Readiness Score was given."),
+  strengths: z.array(z.string()).min(1).describe("Key strengths of this product's import viability."),
+  weaknesses: z.array(z.string()).min(1).describe("Key weaknesses or vulnerabilities."),
+  risks: z.array(z.string()).min(1).describe("Specific operational or capital risks."),
+  recommendedActions: z.array(z.string()).min(1).describe("Actionable next steps based on the score and data."),
+});
+
+export type ImportExplanationAiResult = z.infer<typeof importExplanationAiSchema>;

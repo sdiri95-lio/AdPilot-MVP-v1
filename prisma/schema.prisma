@@ -25,7 +25,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  aiUsageLogs AIUsageLog[]
+  aiUsageLogs  AIUsageLog[]
+  countryNotes CountryNote[]
 
   @@index([clerkId])
   @@index([email])
@@ -84,35 +85,63 @@ model Project {
   difficultyScore   Int?
   marketOpportunity Int?
 
-  winningProbability Decimal?   @db.Decimal(5, 2)
-  confidenceScore    Decimal?   @db.Decimal(5, 2)
-  opportunityReasoning Json?
+  winningProbability        Decimal?   @db.Decimal(5, 2)
+  confidenceScore           Decimal?   @db.Decimal(5, 2)
+  opportunityReasoning      Json?
   opportunityRecommendation String?
-  analysisVersion    String     @default("v1")
-  mediaBuyerReport   Json?
-  riskScore          RiskScore?
-  marketScore        Int?
-  productScore       Int?
+  analysisVersion           String     @default("v1")
+  mediaBuyerReport          Json?
+  riskScore                 RiskScore?
+  marketScore               Int?
+  productScore              Int?
 
-  revenue        Decimal? @db.Decimal(10, 2)
-  margin         Decimal? @db.Decimal(10, 2)
-  marginPercent  Decimal? @db.Decimal(5, 2)
-  breakEvenCpl   Decimal? @db.Decimal(10, 2)
-  breakEvenCpa   Decimal? @db.Decimal(10, 2)
-  targetCpl      Decimal? @db.Decimal(10, 2)
-  targetCpa      Decimal? @db.Decimal(10, 2)
-  minCpl         Decimal? @db.Decimal(10, 2)
-  recommendedCpl Decimal? @db.Decimal(10, 2)
-  maxCpl         Decimal? @db.Decimal(10, 2)
+  revenue           Decimal? @db.Decimal(10, 2)
+  margin            Decimal? @db.Decimal(10, 2)
+  marginPercent     Decimal? @db.Decimal(5, 2)
+  breakEvenCpl      Decimal? @db.Decimal(10, 2)
+  breakEvenCpa      Decimal? @db.Decimal(10, 2)
+  targetCpl         Decimal? @db.Decimal(10, 2)
+  targetCpa         Decimal? @db.Decimal(10, 2)
+  minCpl            Decimal? @db.Decimal(10, 2)
+  recommendedCpl    Decimal? @db.Decimal(10, 2)
+  maxCpl            Decimal? @db.Decimal(10, 2)
   profitAssumptions Json?
 
-  tests            Test[]
-  adCopies         AdCopy[]
-  csvUploads       CsvUpload[]
-  scalingLogs      ScalingLog[]
-  productAnalyses  ProductAnalysis[]
+  tests                      Test[]
+  adCopies                   AdCopy[]
+  csvUploads                 CsvUpload[]
+  scalingLogs                ScalingLog[]
+  productAnalyses            ProductAnalysis[]
   winningProbabilityAnalyses WinningProbabilityAnalysis[]
-  profitAnalyses   ProfitAnalysis[]
+  profitAnalyses             ProfitAnalysis[]
+  mediaBuyingTests           MediaBuyingTest[]
+  timelineEvents             ProjectTimelineEvent[]
+
+  productVideos   Json?
+  supplierLink    String?
+  weight          Decimal? @db.Decimal(10, 2)
+  adLibraryLinks  Json?
+  competitorLinks Json?
+  notes           String?  @db.Text
+
+  solvesProblem     Boolean @default(false)
+  dailyUse          Boolean @default(false)
+  easyToDemonstrate Boolean @default(false)
+  viralPotential    Boolean @default(false)
+  goodMargin        Boolean @default(false)
+  lightweight       Boolean @default(false)
+  codFriendly       Boolean @default(false)
+  sustainableDemand Boolean @default(false)
+
+  researchScore  Int?
+  researchStatus ResearchStatus @default(RESEARCHING)
+
+  importReadinessScore Int?
+  supplierMoq          Int?
+  supplierLeadTime     Int?      // Days
+  importFreightCost    Decimal?  @db.Decimal(10, 2)
+
+  isArchived Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -237,7 +266,7 @@ model ProfitAnalysis {
   recommendedCpl Decimal @db.Decimal(10, 2)
   maxCpl         Decimal @db.Decimal(10, 2)
 
-  assumptions    Json // string[]
+  assumptions Json // string[]
 
   createdAt DateTime @default(now())
 
@@ -258,16 +287,18 @@ model Benchmark {
 }
 
 model CsvUpload {
-  id              String    @id @default(cuid())
-  projectId       String
-  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  fileUrl         String
-  status          CsvStatus @default(PENDING)
-  parsedData      Json?
-  kpiSummary      Json?
-  isWinning       Boolean?
-  recommendations Json?
-  createdAt       DateTime  @default(now())
+  id                String           @id @default(cuid())
+  projectId         String
+  project           Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  mediaBuyingTestId String?
+  mediaBuyingTest   MediaBuyingTest? @relation(fields: [mediaBuyingTestId], references: [id], onDelete: SetNull)
+  fileUrl           String
+  status            CsvStatus        @default(PENDING)
+  parsedData        Json?
+  kpiSummary        Json?
+  isWinning         Boolean?
+  recommendations   Json?
+  createdAt         DateTime         @default(now())
 
   @@index([projectId])
 }
@@ -361,4 +392,103 @@ enum ScalingType {
   VERTICAL
   HORIZONTAL
   BUDGET
+}
+
+enum ResearchStatus {
+  RESEARCHING
+  READY_FOR_TEST
+  REJECTED
+  WINNER
+}
+
+enum MediaBuyingTestStatus {
+  RESEARCH
+  READY
+  PREPARING
+  LAUNCHING
+  TESTING
+  ANALYSIS
+  WINNER
+  FAILED
+  RETEST
+}
+
+model MediaBuyingTest {
+  id          String                @id @default(cuid())
+  projectId   String
+  project     Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  country     String
+  launchDate  DateTime?
+  offer       String?
+  creative    String?
+  landingPage String?
+  dailyBudget Decimal?              @db.Decimal(10, 2)
+  status      MediaBuyingTestStatus @default(RESEARCH)
+
+  deliveryRate     Decimal? @default(100) @db.Decimal(5, 2)
+  confirmationRate Decimal? @default(100) @db.Decimal(5, 2)
+  returnRate       Decimal? @default(0)   @db.Decimal(5, 2)
+  shippingCost     Decimal? @default(0)   @db.Decimal(10, 2)
+  returnFee        Decimal? @default(0)   @db.Decimal(10, 2)
+  failureReason    String?  @db.Text
+
+  isArchived Boolean @default(false)
+
+  csvUploads CsvUpload[]
+  creatives  CreativeTest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model CreativeTest {
+  id                String          @id @default(cuid())
+  mediaBuyingTestId String
+  mediaBuyingTest   MediaBuyingTest @relation(fields: [mediaBuyingTestId], references: [id], onDelete: Cascade)
+  
+  name              String
+  hook              String?
+  
+  spend             Decimal @default(0) @db.Decimal(10, 2)
+  orders            Int     @default(0)
+  revenue           Decimal @default(0) @db.Decimal(10, 2)
+  ctr               Decimal @default(0) @db.Decimal(5, 2)
+  cpc               Decimal @default(0) @db.Decimal(10, 2)
+  cpp               Decimal @default(0) @db.Decimal(10, 2)
+  roas              Decimal @default(0) @db.Decimal(10, 2)
+
+  createdAt         DateTime @default(now())
+
+  @@index([mediaBuyingTestId])
+}
+
+model ProjectTimelineEvent {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  eventType   String
+  title       String
+  description String?  @db.Text
+  metadata    Json?
+  
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model CountryNote {
+  id      String @id @default(cuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  country String
+  notes   String @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, country])
+  @@index([userId])
 }

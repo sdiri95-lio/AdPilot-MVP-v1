@@ -78,6 +78,26 @@ export const projectAnalysisSchema = z.object({
   minCpl: moneySchema.optional(),
   recommendedCpl: moneySchema.optional(),
   maxCpl: moneySchema.optional(),
+  
+  // Product Research OS Fields
+  productVideos: z.any().optional(),
+  supplierLink: z.string().nullable().optional(),
+  weight: z.any().optional(),
+  adLibraryLinks: z.any().optional(),
+  competitorLinks: z.any().optional(),
+  notes: z.string().nullable().optional(),
+  
+  solvesProblem: z.boolean().optional().default(false),
+  dailyUse: z.boolean().optional().default(false),
+  easyToDemonstrate: z.boolean().optional().default(false),
+  viralPotential: z.boolean().optional().default(false),
+  goodMargin: z.boolean().optional().default(false),
+  lightweight: z.boolean().optional().default(false),
+  codFriendly: z.boolean().optional().default(false),
+  sustainableDemand: z.boolean().optional().default(false),
+  
+  researchScore: z.number().nullable().optional(),
+  researchStatus: z.enum(["RESEARCHING", "READY_FOR_TEST", "REJECTED", "WINNER"]).optional().default("RESEARCHING"),
 });
 
 export const projectResponseSchema = projectCreateSchema

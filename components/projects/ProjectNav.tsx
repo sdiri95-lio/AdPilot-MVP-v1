@@ -30,6 +30,38 @@ export function ProjectNav({ projectId }: ProjectNavProps) {
       name: "Profit Calculator",
       href: `/projects/${projectId}/profit`,
     },
+    {
+      name: "Research",
+      href: `/projects/${projectId}/research`,
+    },
+    {
+      name: "Testing Pipeline",
+      href: `/projects/${projectId}/testing`,
+    },
+    {
+      name: "CSV Results",
+      href: `/projects/${projectId}/results`,
+    },
+    {
+      name: "AI Decision",
+      href: `/projects/${projectId}/ai-decision`,
+    },
+    {
+      name: "Winners History",
+      href: `/projects/${projectId}/winners`,
+    },
+    {
+      name: "Country Expansion",
+      href: `/projects/${projectId}/expansion`,
+    },
+    {
+      name: "Import Decision",
+      href: `/projects/${projectId}/import`,
+    },
+    {
+      name: "Product Timeline",
+      href: `/projects/${projectId}/timeline`,
+    },
   ];
 
   return (

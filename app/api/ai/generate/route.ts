@@ -6,12 +6,16 @@ import {
   opportunityScoreAiSchema,
   testStrategyAiSchema,
   copyGeneratorAiSchema,
+  testDecisionAiSchema,
+  importExplanationAiSchema,
 } from "@/lib/ai/schemas";
 import { systemContext } from "@/prompts/system-context";
 import { productAnalyzerPrompt } from "@/prompts/product-analyzer";
 import { winningProbabilityPrompt } from "@/prompts/winning-probability";
 import { testStrategyPrompt } from "@/prompts/test-strategy";
 import { adCopyPrompt } from "@/prompts/ad-copy";
+import { testDecisionPrompt } from "@/prompts/test-decision";
+import { importExplanationPrompt } from "@/prompts/import-explanation";
 import { calculateProfitMetrics } from "@/lib/ai/profit-calculator";
 
 const gateway = new AIGateway();
@@ -96,6 +100,48 @@ export async function POST(req: Request) {
             data.emotionalTriggers
           ),
           schema: copyGeneratorAiSchema,
+        });
+        break;
+
+      case "test-decision":
+        result = await gateway.generate({
+          userId: user.id,
+          feature,
+          systemPrompt: systemContext,
+          userPrompt: testDecisionPrompt(
+            data.productName,
+            data.country,
+            data.spend,
+            data.orders,
+            data.roas,
+            data.ctr,
+            data.cpc,
+            data.cpp,
+            data.deliveryRate,
+            data.trueProfit,
+            data.timelineEvents || []
+          ),
+          schema: testDecisionAiSchema,
+        });
+        break;
+
+      case "import-explanation":
+        result = await gateway.generate({
+          userId: user.id,
+          feature,
+          systemPrompt: systemContext,
+          userPrompt: importExplanationPrompt(
+            data.productName,
+            data.importScore,
+            data.decisionThreshold,
+            data.moq,
+            data.leadTime,
+            data.capitalRequired,
+            data.countriesWon,
+            data.avgDeliveryRate,
+            data.avgTrueProfit
+          ),
+          schema: importExplanationAiSchema,
         });
         break;
 
