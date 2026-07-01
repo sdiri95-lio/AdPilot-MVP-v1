@@ -3,7 +3,7 @@ import { requireUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseFacebookCsv, buildHierarchy } from "@/lib/csv/parser";
 import { AIGateway } from "@/lib/ai/gateway";
-import { advertisingAnalysisPrompt } from "@/prompts/advertising-analysis";
+import { advertisingIntelligencePrompt } from "@/prompts/advertising-intelligence";
 import { advertisingAnalysisSchema } from "@/lib/ai/schemas";
 import { Prisma } from "@prisma/client";
 
@@ -86,8 +86,8 @@ export async function POST(
 
     // 5. Trigger AI Campaign Audit
     console.log("[Ad Intelligence API] Hitting AI Gateway...");
-    const systemPrompt = `You are a senior dropshipping media buyer and logistics analyst. You must always return responses in strict JSON format.`;
-    const userPrompt = advertisingAnalysisPrompt(
+    const systemPrompt = `You are a senior dropshipping media buyer and logistics analyst. You must always return responses in strict JSON format matching the schema exactly.`;
+    const userPrompt = advertisingIntelligencePrompt(
       project.name,
       project.productName,
       project.productCost.toNumber(),
@@ -132,20 +132,20 @@ export async function POST(
       },
     });
 
-    // 7. Save AdvertisingAnalysis record
+    // 7. Save AdvertisingAnalysis record mapping new properties to JSON columns
     const analysis = await prisma.advertisingAnalysis.create({
       data: {
         projectId,
         csvUploadId: upload.id,
-        campaignHealthScore: aiResult.campaignHealthScore,
-        overallDecision: aiResult.overallDecision,
-        confidenceScore: aiResult.confidenceScore,
-        businessIntel: aiResult.businessIntel as unknown as Prisma.InputJsonValue,
-        creativeRanking: aiResult.creativeRanking as unknown as Prisma.InputJsonValue,
-        winningAdSets: aiResult.winningAdSets as unknown as Prisma.InputJsonValue,
-        losingAdSets: aiResult.losingAdSets as unknown as Prisma.InputJsonValue,
-        fatigueWarnings: aiResult.fatigueWarnings as unknown as Prisma.InputJsonValue,
-        optimizationActions: aiResult.optimizationActions as unknown as Prisma.InputJsonValue,
+        campaignHealthScore: aiResult.adPerformance.campaignHealthScore,
+        overallDecision: aiResult.actionPlan.overallDecision,
+        confidenceScore: 100,
+        businessIntel: aiResult.businessIntelligence as unknown as Prisma.InputJsonValue,
+        creativeRanking: aiResult.heroSection as unknown as Prisma.InputJsonValue,
+        winningAdSets: aiResult.adPerformance.adSets as unknown as Prisma.InputJsonValue,
+        losingAdSets: aiResult.operationalFunnel as unknown as Prisma.InputJsonValue,
+        fatigueWarnings: aiResult.criticalAlerts as unknown as Prisma.InputJsonValue,
+        optimizationActions: aiResult.executivePlWaterfall as unknown as Prisma.InputJsonValue,
         actionPlan: aiResult.actionPlan as unknown as Prisma.InputJsonValue,
       },
     });

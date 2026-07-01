@@ -56,69 +56,81 @@ export const productResearchSchema = z.object({
 export type ProductResearchAiResult = z.infer<typeof productResearchSchema>;
 
 export const advertisingAnalysisSchema = z.object({
-  campaignHealthScore: z.number().int().min(0).max(100).describe("0-100 Campaign health score"),
-  overallDecision: z.enum(["SCALE", "OPTIMIZE", "RETEST", "KILL"]).describe("Overall operational decision"),
-  confidenceScore: z.number().int().min(0).max(100).describe("0-100 confidence score in the evaluation"),
-  
-  businessIntel: z.object({
-    trueProfit: z.number().describe("Calculated Net Profit after confirmation and delivery rates"),
-    netMargin: z.number().describe("True Net Profit Margin %"),
-    breakEvenCpa: z.number().describe("Break-even Cost Per Acquisition"),
-    breakEvenCpp: z.number().describe("Break-even Cost Per Purchase"),
-    maxAcceptableCpc: z.number().describe("Maximum acceptable CPC"),
-    maxAcceptableCpm: z.number().describe("Maximum acceptable CPM"),
-    projectedMonthlyProfit: z.number().describe("Projected monthly profit run-rate"),
+  heroSection: z.object({
+    netProfitPerDeliveredOrder: z.number().describe("True net profit per delivered order"),
+    fiveDayRevenue: z.number().describe("Estimated 5-day total revenue"),
+    fiveDayNetProfit: z.number().describe("Estimated 5-day net profit"),
+    returnRate: z.number().describe("Return rate percentage"),
+    confirmationRate: z.number().describe("Call center confirmation rate percentage"),
+    realRoas: z.number().describe("Real ROAS: collected revenue divided by ad spend"),
+    stockRemainingEstimate: z.number().describe("Stock remaining estimation count"),
   }),
-
-  creativeRanking: z.array(z.object({
-    adName: z.string().describe("Facebook ad name"),
-    rank: z.number().int().describe("Rank position (1 is best)"),
-    ctr: z.number().describe("CTR (all) %"),
-    spend: z.number().describe("Spend amount"),
-    orders: z.number().describe("Raw Facebook orders"),
-    status: z.enum(["WINNER", "AVERAGE", "LOSER"]).describe("Creative rating"),
-    insights: z.string().describe("AI insights on creative performance"),
-  })),
-
-  winningAdSets: z.array(z.object({
-    adSetName: z.string().describe("Ad set name"),
-    spend: z.number().describe("Spend amount"),
-    orders: z.number().describe("Orders generated"),
-    cpp: z.number().describe("Cost per purchase"),
-    roas: z.number().describe("Facebook ROAS"),
-    reason: z.string().describe("AI reason for scaling recommendation"),
-  })),
-
-  losingAdSets: z.array(z.object({
-    adSetName: z.string().describe("Ad set name"),
-    spend: z.number().describe("Spend amount"),
-    orders: z.number().describe("Orders generated"),
-    cpp: z.number().describe("Cost per purchase"),
-    roas: z.number().describe("Facebook ROAS"),
-    issue: z.string().describe("Primary performance bottleneck"),
-    recommendation: z.string().describe("Corrective action recommendation"),
-  })),
-
-  fatigueWarnings: z.array(z.object({
-    targetName: z.string().describe("Target Campaign, Adset or Ad name"),
-    frequency: z.number().describe("Current frequency"),
-    warningType: z.string().describe("Fatigue warning type"),
-    remedy: z.string().describe("AI remedy recommendation"),
-  })),
-
-  optimizationActions: z.array(z.object({
-    action: z.string().describe("The exact action to perform"),
-    priority: z.enum(["HIGH", "MEDIUM", "LOW"]).describe("Priority order"),
-    rationale: z.string().describe("Analytical reason behind action"),
-  })),
-
+  criticalAlerts: z.array(
+    z.object({
+      severity: z.enum(["RED", "AMBER"]).describe("Alert urgency level"),
+      finding: z.string().describe("Specific finding details including exact numbers"),
+      action: z.string().describe("Specific action to take"),
+    })
+  ).describe("Critical campaign alerts"),
+  executivePlWaterfall: z.object({
+    revenue: z.number().describe("Selling price collected per delivered order"),
+    cogs: z.number().describe("Cost of goods per delivered order"),
+    internationalShipping: z.number().describe("International shipping cost per delivered order"),
+    grossProfit: z.number().describe("Gross profit per delivered order"),
+    codDeliveryFee: z.number().describe("Local COD delivery fee per delivered order"),
+    returnCostAllocation: z.number().describe("Allocated cost of returned parcels per delivered order"),
+    adSpendAllocation: z.number().describe("Allocated ad spend per delivered order"),
+    netProfitPerOrder: z.number().describe("Net profit per delivered order"),
+    percentages: z.object({
+      revenuePercent: z.number(),
+      cogsPercent: z.number(),
+      internationalShippingPercent: z.number(),
+      grossProfitPercent: z.number(),
+      codDeliveryFeePercent: z.number(),
+      returnCostAllocationPercent: z.number(),
+      adSpendAllocationPercent: z.number(),
+      netProfitPerOrderPercent: z.number(),
+    }).describe("Percentage representation of each P&L line relative to revenue"),
+  }),
+  operationalFunnel: z.object({
+    totalOrders: z.number().describe("Raw Facebook acquisitions / leads"),
+    confirmedOrders: z.number().describe("Confirmed orders count"),
+    confirmedRate: z.number().describe("Confirmation rate %"),
+    shippedOrders: z.number().describe("Shipped orders count"),
+    deliveredOrders: z.number().describe("Delivered orders count"),
+    deliveryRate: z.number().describe("Delivery rate %"),
+    returnedOrders: z.number().describe("Returned orders count"),
+    returnRate: z.number().describe("Return rate %"),
+  }),
+  adPerformance: z.object({
+    campaignHealthScore: z.number().int().min(0).max(100).describe("0-100 Campaign overall health score"),
+    adSets: z.array(
+      z.object({
+        adSetName: z.string().describe("Ad set name"),
+        spend: z.number().describe("Spend amount"),
+        orders: z.number().describe("Acquisition leads"),
+        cpp: z.number().describe("Cost per purchase (raw Facebook)"),
+        roas: z.number().describe("Facebook ROAS"),
+        status: z.enum(["SCALE", "OPTIMIZE", "PAUSE", "KILL"]).describe("Recommended status"),
+        recommendation: z.string().describe("Specific recommendation details with exact numbers"),
+      })
+    ),
+  }),
+  businessIntelligence: z.object({
+    breakEvenCpp: z.number().describe("Break-even Cost Per Purchase"),
+    breakEvenCpa: z.number().describe("Break-even Cost Per Acquisition (Leads)"),
+    maxAcceptableAdSpendPerOrder: z.number().describe("Max acceptable ad spend per delivered order"),
+    projectedMonthlyProfitCurrent: z.number().describe("Projected monthly profit at current rate"),
+    projectedMonthlyProfitOptimized: z.number().describe("Projected monthly profit if optimized"),
+  }),
   actionPlan: z.object({
-    immediate: z.array(z.string()).describe("Actions to execute within 24 hours"),
-    monitor: z.array(z.string()).describe("Metrics to monitor closely over next 3-7 days"),
-    scaling: z.array(z.string()).describe("Scaling blueprint recommendation"),
-    risk: z.array(z.string()).describe("Logistics/ad risks to manage"),
-    nextBudget: z.number().describe("Recommended daily budget for next test phase"),
+    priority1: z.array(z.string()).describe("High priority items to execute today"),
+    priority2: z.array(z.string()).describe("Medium priority items to execute this week"),
+    priority3: z.array(z.string()).describe("Items to monitor closely"),
+    overallDecision: z.enum(["SCALE", "OPTIMIZE", "RETEST", "KILL"]).describe("Final decision"),
+    reasoning: z.string().describe("Detailed reasoning backing overall decision"),
   }),
 });
 
 export type AdvertisingAnalysisAiResult = z.infer<typeof advertisingAnalysisSchema>;
+

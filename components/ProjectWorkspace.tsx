@@ -96,57 +96,71 @@ type AdvertisingAnalysis = {
   overallDecision: "SCALE" | "OPTIMIZE" | "RETEST" | "KILL";
   confidenceScore: number;
   businessIntel: {
-    trueProfit: number;
-    netMargin: number;
-    breakEvenCpa: number;
     breakEvenCpp: number;
-    maxAcceptableCpc: number;
-    maxAcceptableCpm: number;
-    projectedMonthlyProfit: number;
+    breakEvenCpa: number;
+    maxAcceptableAdSpendPerOrder: number;
+    projectedMonthlyProfitCurrent: number;
+    projectedMonthlyProfitOptimized: number;
   };
-  creativeRanking: Array<{
-    adName: string;
-    rank: number;
-    ctr: number;
-    spend: number;
-    orders: number;
-    status: "WINNER" | "AVERAGE" | "LOSER";
-    insights: string;
-  }>;
+  creativeRanking: {
+    netProfitPerDeliveredOrder: number;
+    fiveDayRevenue: number;
+    fiveDayNetProfit: number;
+    returnRate: number;
+    confirmationRate: number;
+    realRoas: number;
+    stockRemainingEstimate: number;
+  };
   winningAdSets: Array<{
     adSetName: string;
     spend: number;
     orders: number;
     cpp: number;
     roas: number;
-    reason: string;
-  }>;
-  losingAdSets: Array<{
-    adSetName: string;
-    spend: number;
-    orders: number;
-    cpp: number;
-    roas: number;
-    issue: string;
+    status: "SCALE" | "OPTIMIZE" | "PAUSE" | "KILL";
     recommendation: string;
   }>;
+  losingAdSets: {
+    totalOrders: number;
+    confirmedOrders: number;
+    confirmedRate: number;
+    shippedOrders: number;
+    deliveredOrders: number;
+    deliveryRate: number;
+    returnedOrders: number;
+    returnRate: number;
+  };
   fatigueWarnings: Array<{
-    targetName: string;
-    frequency: number;
-    warningType: string;
-    remedy: string;
-  }>;
-  optimizationActions: Array<{
+    severity: "RED" | "AMBER";
+    finding: string;
     action: string;
-    priority: "HIGH" | "MEDIUM" | "LOW";
-    rationale: string;
   }>;
+  optimizationActions: {
+    revenue: number;
+    cogs: number;
+    internationalShipping: number;
+    grossProfit: number;
+    codDeliveryFee: number;
+    returnCostAllocation: number;
+    adSpendAllocation: number;
+    netProfitPerOrder: number;
+    percentages: {
+      revenuePercent: number;
+      cogsPercent: number;
+      internationalShippingPercent: number;
+      grossProfitPercent: number;
+      codDeliveryFeePercent: number;
+      returnCostAllocationPercent: number;
+      adSpendAllocationPercent: number;
+      netProfitPerOrderPercent: number;
+    };
+  };
   actionPlan: {
-    immediate: string[];
-    monitor: string[];
-    scaling: string[];
-    risk: string[];
-    nextBudget: number;
+    priority1: string[];
+    priority2: string[];
+    priority3: string[];
+    overallDecision: "SCALE" | "OPTIMIZE" | "RETEST" | "KILL";
+    reasoning: string;
   };
   createdAt: string;
   csvUpload: {
@@ -1066,327 +1080,401 @@ export function ProjectWorkspace({ project: initialProject }: ProjectWorkspacePr
 
                   {activeAnalysis && (
                     <div className="space-y-6">
-                      {/* KPI Cards Row */}
-                      <div className="grid gap-6 md:grid-cols-4">
-                        {/* Health Score */}
-                        <div className="bg-zinc-900/40 p-5 rounded-xl border border-zinc-900 flex flex-col justify-between relative overflow-hidden">
-                          <div>
-                            <span className="text-[10px] uppercase font-bold text-zinc-500">Health Score</span>
-                            <div className="text-3xl font-black mt-2 text-white">
-                              {activeAnalysis.campaignHealthScore}
-                              <span className="text-xs font-normal text-zinc-500">/100</span>
-                            </div>
-                          </div>
-                          <div className="h-1 bg-zinc-950 rounded-full mt-6 overflow-hidden">
-                            <div
-                              className="h-full bg-indigo-500 rounded-full"
-                              style={{ width: `${activeAnalysis.campaignHealthScore}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Overall Decision */}
-                        <div className="bg-zinc-900/40 p-5 rounded-xl border border-zinc-900 flex flex-col justify-between">
-                          <div>
-                            <span className="text-[10px] uppercase font-bold text-zinc-500">Macro Decision</span>
-                            <div className="mt-2.5">
-                              {getDecisionBadge(activeAnalysis.overallDecision)}
-                            </div>
-                          </div>
-                          <span className="text-[9px] text-zinc-500 uppercase font-semibold mt-4">
-                            Confidence: {activeAnalysis.confidenceScore}%
-                          </span>
-                        </div>
-
-                        {/* True Net Profit */}
-                        <div className="bg-zinc-900/40 p-5 rounded-xl border border-zinc-900 flex flex-col justify-between">
-                          <div>
-                            <span className="text-[10px] uppercase font-bold text-zinc-500">True Net Profit</span>
-                            <div className={`text-2xl font-black mt-2 ${
-                              activeAnalysis.businessIntel.trueProfit >= 0 ? "text-emerald-400" : "text-rose-500"
+                      {/* 1. HERO SECTION — Top KPIs */}
+                      <div className="bg-zinc-900/20 p-6 rounded-xl border border-zinc-900 space-y-4">
+                        <h4 className="font-extrabold text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-2 pb-2 border-b border-zinc-900">
+                          <Activity className="h-4 w-4 text-indigo-500" />
+                          Hero Performance KPIs (5-Day Window)
+                        </h4>
+                        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
+                          {/* Net Profit per delivered order */}
+                          <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 flex flex-col justify-between">
+                            <span className="text-[9px] uppercase font-bold text-zinc-500">Net Profit/Delivered</span>
+                            <span className={`text-lg font-black mt-2 ${
+                              activeAnalysis.creativeRanking.netProfitPerDeliveredOrder >= 0 ? "text-emerald-400" : "text-rose-500"
                             }`}>
-                              ${activeAnalysis.businessIntel.trueProfit.toFixed(2)}
-                            </div>
+                              ${activeAnalysis.creativeRanking.netProfitPerDeliveredOrder.toFixed(2)}
+                            </span>
                           </div>
-                          <span className="text-[9px] text-zinc-400 uppercase font-semibold mt-4">
-                            Margin: {activeAnalysis.businessIntel.netMargin.toFixed(1)}%
-                          </span>
-                        </div>
 
-                        {/* Monthly Profit Projection */}
-                        <div className="bg-zinc-900/40 p-5 rounded-xl border border-zinc-900 flex flex-col justify-between">
-                          <div>
-                            <span className="text-[10px] uppercase font-bold text-zinc-500">Projected Runrate</span>
-                            <div className={`text-2xl font-black mt-2 ${
-                              activeAnalysis.businessIntel.projectedMonthlyProfit >= 0 ? "text-emerald-400" : "text-rose-500"
-                            }`}>
-                              ${activeAnalysis.businessIntel.projectedMonthlyProfit.toFixed(2)}
-                            </div>
+                          {/* 5-day total revenue */}
+                          <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 flex flex-col justify-between">
+                            <span className="text-[9px] uppercase font-bold text-zinc-500">5-Day Revenue</span>
+                            <span className="text-lg font-black mt-2 text-white">
+                              ${activeAnalysis.creativeRanking.fiveDayRevenue.toFixed(2)}
+                            </span>
                           </div>
-                          <span className="text-[9px] text-zinc-500 uppercase font-semibold mt-4">
-                            Per month estimation
-                          </span>
+
+                          {/* 5-day net profit */}
+                          <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 flex flex-col justify-between">
+                            <span className="text-[9px] uppercase font-bold text-zinc-500">5-Day Net Profit</span>
+                            <span className={`text-lg font-black mt-2 ${
+                              activeAnalysis.creativeRanking.fiveDayNetProfit >= 0 ? "text-emerald-400" : "text-rose-500"
+                            }`}>
+                              ${activeAnalysis.creativeRanking.fiveDayNetProfit.toFixed(2)}
+                            </span>
+                          </div>
+
+                          {/* Return rate */}
+                          <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 flex flex-col justify-between">
+                            <span className="text-[9px] uppercase font-bold text-zinc-500">Return Rate</span>
+                            <span className="text-lg font-black mt-2 text-rose-400">
+                              {activeAnalysis.creativeRanking.returnRate.toFixed(1)}%
+                            </span>
+                          </div>
+
+                          {/* Confirmation rate */}
+                          <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 flex flex-col justify-between">
+                            <span className="text-[9px] uppercase font-bold text-zinc-500">Confirm Rate</span>
+                            <span className="text-lg font-black mt-2 text-emerald-400">
+                              {activeAnalysis.creativeRanking.confirmationRate.toFixed(1)}%
+                            </span>
+                          </div>
+
+                          {/* Real ROAS */}
+                          <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 flex flex-col justify-between">
+                            <span className="text-[9px] uppercase font-bold text-zinc-500">Real ROAS</span>
+                            <span className="text-lg font-black mt-2 text-indigo-400">
+                              {activeAnalysis.creativeRanking.realRoas.toFixed(2)}x
+                            </span>
+                          </div>
+
+                          {/* Stock remaining estimate */}
+                          <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 flex flex-col justify-between">
+                            <span className="text-[9px] uppercase font-bold text-zinc-500">Stock Est.</span>
+                            <span className="text-lg font-black mt-2 text-zinc-300">
+                              {activeAnalysis.creativeRanking.stockRemainingEstimate} units
+                            </span>
+                          </div>
                         </div>
                       </div>
 
-                      {/* COD Business Intelligence Math */}
-                      <div className="bg-zinc-900/40 p-6 rounded-xl border border-zinc-900 space-y-6">
+                      {/* 2. CRITICAL ALERTS SECTION */}
+                      <div className="bg-zinc-900/20 p-6 rounded-xl border border-zinc-900 space-y-4">
                         <h4 className="font-extrabold text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-2 pb-2 border-b border-zinc-900">
-                          <DollarSign className="h-4 w-4" />
-                          COD Economics vs Facebook metrics (The Truth)
+                          <AlertTriangle className="h-4 w-4 text-rose-500" />
+                          Critical Media Alerts
                         </h4>
-
-                        {activeAnalysis.csvUpload && (
-                          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 text-xs">
-                            <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 space-y-1">
-                              <p className="text-zinc-500">Facebook Ad Spend</p>
-                              <p className="text-lg font-bold">${activeAnalysis.csvUpload.kpiSummary.spend.toFixed(2)}</p>
-                            </div>
-                            <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 space-y-1">
-                              <p className="text-zinc-500">Facebook Purchases</p>
-                              <p className="text-lg font-bold">{activeAnalysis.csvUpload.kpiSummary.orders}</p>
-                            </div>
-                            <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 space-y-1">
-                              <p className="text-zinc-500">Facebook CPC</p>
-                              <p className="text-lg font-bold">${activeAnalysis.csvUpload.kpiSummary.cpc.toFixed(2)}</p>
-                            </div>
-                            <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 space-y-1">
-                              <p className="text-zinc-500">Facebook CPM</p>
-                              <p className="text-lg font-bold">${activeAnalysis.csvUpload.kpiSummary.cpm.toFixed(2)}</p>
-                            </div>
+                        {activeAnalysis.fatigueWarnings.length === 0 ? (
+                          <div className="text-zinc-500 text-xs py-2">
+                            No critical alerts detected for this ad period.
+                          </div>
+                        ) : (
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {activeAnalysis.fatigueWarnings.map((alert, idx) => (
+                              <div
+                                key={idx}
+                                className={`p-4 rounded-lg border text-xs flex flex-col justify-between space-y-2 ${
+                                  alert.severity === "RED"
+                                    ? "bg-rose-500/5 border-rose-500/20"
+                                    : "bg-amber-500/5 border-amber-500/20"
+                                }`}
+                              >
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                                        alert.severity === "RED"
+                                          ? "bg-rose-500 text-white"
+                                          : "bg-amber-500 text-black"
+                                      }`}
+                                    >
+                                      {alert.severity} ALERT
+                                    </span>
+                                  </div>
+                                  <p className="font-bold text-zinc-200 mt-1.5">{alert.finding}</p>
+                                </div>
+                                <p className="text-zinc-400 leading-relaxed pt-1.5 border-t border-zinc-900/60">
+                                  <span className="font-semibold text-white">Action:</span> {alert.action}
+                                </p>
+                              </div>
+                            ))}
                           </div>
                         )}
+                      </div>
 
-                        <div className="grid gap-6 md:grid-cols-3 pt-2 text-xs">
-                          {/* Break-evens */}
+                      {/* 3. EXECUTIVE P&L WATERFALL & 4. OPERATIONAL FUNNEL */}
+                      <div className="grid gap-6 md:grid-cols-2">
+                        {/* 3. EXECUTIVE P&L WATERFALL */}
+                        <div className="bg-zinc-900/20 p-6 rounded-xl border border-zinc-900 space-y-4 flex flex-col justify-between">
+                          <div>
+                            <h4 className="font-extrabold text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-2 pb-2 border-b border-zinc-900">
+                              <DollarSign className="h-4 w-4 text-emerald-500" />
+                              Executive P&L Waterfall (Per Delivered Order)
+                            </h4>
+                            <div className="space-y-2 mt-4 text-xs">
+                              {/* Revenue */}
+                              <div className="flex justify-between items-center py-2 border-b border-zinc-900">
+                                <span className="text-zinc-400">Revenue (Selling Price)</span>
+                                <div className="font-bold text-zinc-200">
+                                  ${activeAnalysis.optimizationActions.revenue.toFixed(2)}
+                                  <span className="text-zinc-500 font-normal ml-2">({activeAnalysis.optimizationActions.percentages.revenuePercent.toFixed(1)}%)</span>
+                                </div>
+                              </div>
+                              {/* COGS */}
+                              <div className="flex justify-between items-center py-2 border-b border-zinc-900">
+                                <span className="text-zinc-400">Cost of Goods (COGS)</span>
+                                <div className="font-bold text-zinc-200">
+                                  -${activeAnalysis.optimizationActions.cogs.toFixed(2)}
+                                  <span className="text-zinc-500 font-normal ml-2">({activeAnalysis.optimizationActions.percentages.cogsPercent.toFixed(1)}%)</span>
+                                </div>
+                              </div>
+                              {/* International Freight */}
+                              <div className="flex justify-between items-center py-2 border-b border-zinc-900">
+                                <span className="text-zinc-400">Intl Shipping Freight</span>
+                                <div className="font-bold text-zinc-200">
+                                  -${activeAnalysis.optimizationActions.internationalShipping.toFixed(2)}
+                                  <span className="text-zinc-500 font-normal ml-2">({activeAnalysis.optimizationActions.percentages.internationalShippingPercent.toFixed(1)}%)</span>
+                                </div>
+                              </div>
+                              {/* Gross Profit */}
+                              <div className="flex justify-between items-center py-2 border-b border-zinc-900 font-semibold bg-zinc-950/20 px-2 rounded">
+                                <span className="text-zinc-300">Gross Profit</span>
+                                <div className="text-zinc-200">
+                                  ${activeAnalysis.optimizationActions.grossProfit.toFixed(2)}
+                                  <span className="text-zinc-500 font-normal ml-2">({activeAnalysis.optimizationActions.percentages.grossProfitPercent.toFixed(1)}%)</span>
+                                </div>
+                              </div>
+                              {/* Delivery courier */}
+                              <div className="flex justify-between items-center py-2 border-b border-zinc-900">
+                                <span className="text-zinc-400">Local COD Delivery Fee</span>
+                                <div className="font-bold text-zinc-200">
+                                  -${activeAnalysis.optimizationActions.codDeliveryFee.toFixed(2)}
+                                  <span className="text-zinc-500 font-normal ml-2">({activeAnalysis.optimizationActions.percentages.codDeliveryFeePercent.toFixed(1)}%)</span>
+                                </div>
+                              </div>
+                              {/* Return fee allocation */}
+                              <div className="flex justify-between items-center py-2 border-b border-zinc-900">
+                                <span className="text-zinc-400">Returns Cost Allocation</span>
+                                <div className="font-bold text-zinc-200">
+                                  -${activeAnalysis.optimizationActions.returnCostAllocation.toFixed(2)}
+                                  <span className="text-zinc-500 font-normal ml-2">({activeAnalysis.optimizationActions.percentages.returnCostAllocationPercent.toFixed(1)}%)</span>
+                                </div>
+                              </div>
+                              {/* Ad spend */}
+                              <div className="flex justify-between items-center py-2 border-b border-zinc-900">
+                                <span className="text-zinc-400">Ad Spend Allocation</span>
+                                <div className="font-bold text-zinc-200">
+                                  -${activeAnalysis.optimizationActions.adSpendAllocation.toFixed(2)}
+                                  <span className="text-zinc-500 font-normal ml-2">({activeAnalysis.optimizationActions.percentages.adSpendAllocationPercent.toFixed(1)}%)</span>
+                                </div>
+                              </div>
+                              {/* Net profit */}
+                              <div className="flex justify-between items-center py-2 font-black bg-zinc-950 p-2 rounded">
+                                <span className="text-emerald-400 uppercase">True Net Profit</span>
+                                <div className={activeAnalysis.optimizationActions.netProfitPerOrder >= 0 ? "text-emerald-400" : "text-rose-500"}>
+                                  ${activeAnalysis.optimizationActions.netProfitPerOrder.toFixed(2)}
+                                  <span className="text-zinc-400 font-normal ml-2">({activeAnalysis.optimizationActions.percentages.netProfitPerOrderPercent.toFixed(1)}%)</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 4. OPERATIONAL FUNNEL */}
+                        <div className="bg-zinc-900/20 p-6 rounded-xl border border-zinc-900 space-y-4">
+                          <h4 className="font-extrabold text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-2 pb-2 border-b border-zinc-900">
+                            <TrendingUp className="h-4 w-4 text-indigo-500" />
+                            COD Operational Funnel & Conversions
+                          </h4>
+                          <div className="space-y-3 mt-4">
+                            {/* Total acquisitions */}
+                            <div className="flex items-center justify-between p-3 rounded bg-zinc-950 border border-zinc-900 text-xs">
+                              <div>
+                                <span className="text-[10px] uppercase font-bold text-zinc-500">1. Total Orders Acquired</span>
+                                <p className="font-black text-white text-sm mt-1">{activeAnalysis.losingAdSets.totalOrders} units</p>
+                              </div>
+                              <span className="text-[10px] font-bold bg-zinc-900 px-2 py-1 rounded text-zinc-400">Benchmark</span>
+                            </div>
+
+                            {/* Confirmed */}
+                            <div className="flex items-center justify-between p-3 rounded bg-zinc-950 border border-zinc-900 text-xs">
+                              <div>
+                                <span className="text-[10px] uppercase font-bold text-zinc-500">2. Confirmed via Call Center</span>
+                                <p className="font-black text-white text-sm mt-1">{activeAnalysis.losingAdSets.confirmedOrders} units</p>
+                              </div>
+                              <span className="text-xs font-black text-emerald-400">{activeAnalysis.losingAdSets.confirmedRate.toFixed(1)}%</span>
+                            </div>
+
+                            {/* Shipped */}
+                            <div className="flex items-center justify-between p-3 rounded bg-zinc-950 border border-zinc-900 text-xs">
+                              <div>
+                                <span className="text-[10px] uppercase font-bold text-zinc-500">3. Shipped / Dispatched</span>
+                                <p className="font-black text-white text-sm mt-1">{activeAnalysis.losingAdSets.shippedOrders} units</p>
+                              </div>
+                              <span className="text-xs font-semibold text-zinc-500">100.0% of conf.</span>
+                            </div>
+
+                            {/* Delivered */}
+                            <div className="flex items-center justify-between p-3 rounded bg-zinc-950 border border-zinc-900 text-xs">
+                              <div>
+                                <span className="text-[10px] uppercase font-bold text-zinc-500">4. Delivered & Paid (Cash)</span>
+                                <p className="font-black text-emerald-400 text-sm mt-1">{activeAnalysis.losingAdSets.deliveredOrders} units</p>
+                              </div>
+                              <span className="text-xs font-black text-emerald-400">{activeAnalysis.losingAdSets.deliveryRate.toFixed(1)}%</span>
+                            </div>
+
+                            {/* Returned */}
+                            <div className="flex items-center justify-between p-3 rounded bg-zinc-950 border border-zinc-900 text-xs">
+                              <div>
+                                <span className="text-[10px] uppercase font-bold text-zinc-500">5. Returned Parcel Failures</span>
+                                <p className="font-black text-rose-500 text-sm mt-1">{activeAnalysis.losingAdSets.returnedOrders} units</p>
+                              </div>
+                              <span className="text-xs font-black text-rose-500">{activeAnalysis.losingAdSets.returnRate.toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 5. AD PERFORMANCE SECTION */}
+                      <div className="bg-zinc-900/20 p-6 rounded-xl border border-zinc-900 space-y-4">
+                        <div className="flex justify-between items-center pb-2 border-b border-zinc-900">
+                          <h4 className="font-extrabold text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                            <Award className="h-4 w-4 text-indigo-500" />
+                            Ad Set Performance & Recommendations
+                          </h4>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9px] uppercase font-bold text-zinc-500">Campaign Health</span>
+                            <div className="text-sm font-black text-white bg-indigo-950 border border-indigo-500/20 px-2 py-0.5 rounded flex items-center gap-1">
+                              {activeAnalysis.campaignHealthScore}
+                              <span className="text-[9px] font-normal text-zinc-400">/100</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          {activeAnalysis.winningAdSets.map((ws, i) => (
+                            <div key={i} className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 space-y-3 text-xs">
+                              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                <span className="font-bold text-zinc-200 text-sm truncate max-w-[80%]">{ws.adSetName}</span>
+                                <Badge className={
+                                  ws.status === "SCALE"
+                                    ? "bg-emerald-600 hover:bg-emerald-600 text-white font-bold"
+                                    : ws.status === "OPTIMIZE"
+                                    ? "bg-amber-600 hover:bg-amber-600 text-white font-bold"
+                                    : "bg-rose-600 hover:bg-rose-600 text-white font-bold"
+                                }>
+                                  {ws.status}
+                                </Badge>
+                              </div>
+                              <div className="grid gap-4 grid-cols-2 sm:grid-cols-4 text-zinc-400">
+                                <div>Spend: <span className="font-bold text-white">${ws.spend.toFixed(2)}</span></div>
+                                <div>Orders: <span className="font-bold text-white">{ws.orders}</span></div>
+                                <div>CPP: <span className="font-bold text-white">${ws.cpp.toFixed(2)}</span></div>
+                                <div>FB ROAS: <span className="font-bold text-white">{ws.roas.toFixed(2)}x</span></div>
+                              </div>
+                              <p className="text-zinc-400 pt-2 border-t border-zinc-900/60 leading-relaxed">
+                                <span className="font-semibold text-white">AI Verdict:</span> {ws.recommendation}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 6. BUSINESS INTELLIGENCE */}
+                      <div className="bg-zinc-900/20 p-6 rounded-xl border border-zinc-900 space-y-4">
+                        <h4 className="font-extrabold text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-2 pb-2 border-b border-zinc-900">
+                          <DollarSign className="h-4 w-4 text-indigo-500" />
+                          COD Business Intelligence Limits
+                        </h4>
+                        <div className="grid gap-6 md:grid-cols-3 text-xs">
+                          {/* Limits */}
                           <div className="space-y-3">
                             <p className="uppercase font-extrabold text-[10px] text-zinc-500 tracking-wider">Break-Even Limits</p>
                             <div className="space-y-2">
-                              <div className="flex justify-between p-2 rounded bg-zinc-950 border border-zinc-900">
+                              <div className="flex justify-between p-2.5 rounded bg-zinc-950 border border-zinc-900">
                                 <span className="text-zinc-400">Break-even CPP:</span>
                                 <span className="font-bold text-zinc-200">${activeAnalysis.businessIntel.breakEvenCpp.toFixed(2)}</span>
                               </div>
-                              <div className="flex justify-between p-2 rounded bg-zinc-950 border border-zinc-900">
+                              <div className="flex justify-between p-2.5 rounded bg-zinc-950 border border-zinc-900">
                                 <span className="text-zinc-400">Break-even CPA (Leads):</span>
                                 <span className="font-bold text-zinc-200">${activeAnalysis.businessIntel.breakEvenCpa.toFixed(2)}</span>
                               </div>
                             </div>
                           </div>
 
-                          {/* Max Acceptable Costs */}
+                          {/* Max budget */}
                           <div className="space-y-3">
-                            <p className="uppercase font-extrabold text-[10px] text-zinc-500 tracking-wider">Max Acceptable Costs</p>
+                            <p className="uppercase font-extrabold text-[10px] text-zinc-500 tracking-wider">Acquisition Capacity</p>
                             <div className="space-y-2">
-                              <div className="flex justify-between p-2 rounded bg-zinc-950 border border-zinc-900">
-                                <span className="text-zinc-400">Max Acceptable CPC:</span>
-                                <span className="font-bold text-zinc-200">${activeAnalysis.businessIntel.maxAcceptableCpc.toFixed(2)}</span>
-                              </div>
-                              <div className="flex justify-between p-2 rounded bg-zinc-950 border border-zinc-900">
-                                <span className="text-zinc-400">Max Acceptable CPM:</span>
-                                <span className="font-bold text-zinc-200">${activeAnalysis.businessIntel.maxAcceptableCpm.toFixed(2)}</span>
+                              <div className="flex justify-between p-2.5 rounded bg-zinc-950 border border-zinc-900">
+                                <span className="text-zinc-400">Max Acceptable Spend/Order:</span>
+                                <span className="font-bold text-zinc-200">${activeAnalysis.businessIntel.maxAcceptableAdSpendPerOrder.toFixed(2)}</span>
                               </div>
                             </div>
                           </div>
 
-                          {/* Projections info */}
-                          <div className="p-4 rounded-lg bg-indigo-600/5 border border-indigo-500/10 space-y-2">
-                            <h5 className="font-extrabold text-indigo-400 uppercase tracking-wider text-[10px]">Logistics Correction Notice</h5>
-                            <p className="text-[10px] text-zinc-400 leading-relaxed">
-                              These economic calculations include local courier pricing, outbound logistics delivery drop-off success, warehouse order confirmation parameters, and courier return penalties.
-                            </p>
+                          {/* Projected values */}
+                          <div className="space-y-3">
+                            <p className="uppercase font-extrabold text-[10px] text-zinc-500 tracking-wider">Projections Run-rate</p>
+                            <div className="space-y-2">
+                              <div className="flex justify-between p-2.5 rounded bg-zinc-950 border border-zinc-900">
+                                <span className="text-zinc-400">Projected Monthly (Current):</span>
+                                <span className={`font-bold ${
+                                  activeAnalysis.businessIntel.projectedMonthlyProfitCurrent >= 0 ? "text-emerald-400" : "text-rose-500"
+                                }`}>
+                                  ${activeAnalysis.businessIntel.projectedMonthlyProfitCurrent.toFixed(2)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between p-2.5 rounded bg-zinc-950 border border-zinc-900">
+                                <span className="text-zinc-400">Projected Monthly (Optimized):</span>
+                                <span className="font-bold text-emerald-400">
+                                  ${activeAnalysis.businessIntel.projectedMonthlyProfitOptimized.toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* Creative rankings, Optimization Engine */}
-                      <div className="grid gap-6 md:grid-cols-2">
-                        {/* Optimization Engine */}
-                        <div className="bg-zinc-900/40 p-6 rounded-xl border border-zinc-900 space-y-4">
-                          <h4 className="font-extrabold text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-2 pb-2 border-b border-zinc-900">
-                            <Activity className="h-4 w-4 text-indigo-500" />
-                            AI Optimization Actions
+                      {/* 7. AI ACTION PLAN */}
+                      <div className="bg-zinc-900/20 p-6 rounded-xl border border-zinc-900 space-y-6">
+                        <div className="flex justify-between items-center pb-2 border-b border-zinc-900">
+                          <h4 className="font-extrabold text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                            <Brain className="h-4 w-4 text-indigo-500" />
+                            AI Action Plan & Macro Decision
                           </h4>
-
-                          <div className="space-y-3">
-                            {activeAnalysis.optimizationActions.map((opt, idx) => (
-                              <div key={idx} className="p-3 bg-zinc-950 rounded-lg border border-zinc-900 space-y-1.5">
-                                <div className="flex justify-between items-center">
-                                  <span className="font-bold text-xs text-white">{opt.action}</span>
-                                  <Badge className={
-                                    opt.priority === "HIGH" ? "bg-rose-500 text-white" : opt.priority === "MEDIUM" ? "bg-amber-500 text-white" : "bg-blue-500 text-white"
-                                  }>
-                                    {opt.priority}
-                                  </Badge>
-                                </div>
-                                <p className="text-[11px] text-zinc-400">{opt.rationale}</p>
-                              </div>
-                            ))}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9px] uppercase font-bold text-zinc-500 font-semibold">Overall Decision</span>
+                            {getDecisionBadge(activeAnalysis.actionPlan.overallDecision)}
                           </div>
                         </div>
 
-                        {/* Fatigue warnings */}
-                        <div className="bg-zinc-900/40 p-6 rounded-xl border border-zinc-900 space-y-4">
-                          <h4 className="font-extrabold text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-2 pb-2 border-b border-zinc-900">
-                            <AlertTriangle className="h-4 w-4 text-rose-500" />
-                            Ad Fatigue & Creative wear Alerts
-                          </h4>
-
-                          {activeAnalysis.fatigueWarnings.length === 0 ? (
-                            <div className="flex items-center justify-center p-8 text-zinc-500 text-xs font-semibold">
-                              All clear! No ad frequency fatigue warnings.
-                            </div>
-                          ) : (
-                            <div className="space-y-3">
-                              {activeAnalysis.fatigueWarnings.map((w, idx) => (
-                                <div key={idx} className="p-3 bg-rose-500/5 rounded-lg border border-rose-500/10 space-y-1.5">
-                                  <div className="flex justify-between items-center">
-                                    <span className="font-bold text-xs text-rose-400 truncate max-w-[70%]">{w.targetName}</span>
-                                    <Badge variant="outline" className="text-[9px] uppercase border-rose-500/40 text-rose-400">
-                                      Freq: {w.frequency.toFixed(1)}x
-                                    </Badge>
-                                  </div>
-                                  <p className="text-[10px] text-zinc-400 font-bold uppercase text-[9px]">{w.warningType}</p>
-                                  <p className="text-[11px] text-zinc-300"><strong className="text-zinc-500">Fix:</strong> {w.remedy}</p>
-                                </div>
+                        <div className="grid gap-6 md:grid-cols-3 text-xs">
+                          {/* Priority 1 (do today) */}
+                          <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 space-y-3">
+                            <span className="text-[10px] uppercase font-bold text-rose-400 tracking-wider">Priority 1 (Do Today)</span>
+                            <ul className="list-disc pl-4 space-y-2 text-zinc-300 leading-relaxed">
+                              {activeAnalysis.actionPlan.priority1.map((item, idx) => (
+                                <li key={idx}>{item}</li>
                               ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                            </ul>
+                          </div>
 
-                      {/* Creative rankings, Ad Set performance lists */}
-                      <div className="bg-zinc-900/40 p-6 rounded-xl border border-zinc-900 space-y-6">
-                        <h4 className="font-extrabold text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-2 pb-2 border-b border-zinc-900">
-                          <Award className="h-4 w-4 text-indigo-500" />
-                          Creative Rankings & Ad Set Analysis
-                        </h4>
+                          {/* Priority 2 (do this week) */}
+                          <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 space-y-3">
+                            <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider">Priority 2 (Do This Week)</span>
+                            <ul className="list-disc pl-4 space-y-2 text-zinc-300 leading-relaxed">
+                              {activeAnalysis.actionPlan.priority2.map((item, idx) => (
+                                <li key={idx}>{item}</li>
+                              ))}
+                            </ul>
+                          </div>
 
-                        {/* Creative Performance Rankings */}
-                        <div className="space-y-3">
-                          <p className="text-xs uppercase font-extrabold text-indigo-400 tracking-wider">Creative Performance</p>
-                          <div className="space-y-2">
-                            {activeAnalysis.creativeRanking.map((creative) => (
-                              <div key={creative.adName} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-zinc-950 p-4 rounded border border-zinc-900 gap-4 text-xs">
-                                <div className="space-y-1 max-w-[70%]">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-extrabold text-white">#{creative.rank} {creative.adName}</span>
-                                    <Badge className={
-                                      creative.status === "WINNER" ? "bg-emerald-600" : creative.status === "LOSER" ? "bg-rose-500" : "bg-zinc-700"
-                                    }>
-                                      {creative.status}
-                                    </Badge>
-                                  </div>
-                                  <p className="text-[11px] text-zinc-400 italic">{creative.insights}</p>
-                                </div>
-                                <div className="flex gap-4 font-semibold text-zinc-300">
-                                  <span>Spend: <strong className="text-white">${creative.spend.toFixed(0)}</strong></span>
-                                  <span>CTR: <strong className="text-white">{creative.ctr.toFixed(2)}%</strong></span>
-                                  <span>Facebook Orders: <strong className="text-white">{creative.orders}</strong></span>
-                                </div>
-                              </div>
-                            ))}
+                          {/* Priority 3 (monitor) */}
+                          <div className="bg-zinc-950 p-4 rounded-lg border border-zinc-900 space-y-3">
+                            <span className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider">Priority 3 (Monitor closely)</span>
+                            <ul className="list-disc pl-4 space-y-2 text-zinc-300 leading-relaxed">
+                              {activeAnalysis.actionPlan.priority3.map((item, idx) => (
+                                <li key={idx}>{item}</li>
+                              ))}
+                            </ul>
                           </div>
                         </div>
 
-                        {/* Ad Sets Analysis Winners vs Losers */}
-                        <div className="grid gap-6 md:grid-cols-2 pt-4 border-t border-zinc-900/80">
-                          {/* Winners */}
-                          <div className="space-y-3">
-                            <p className="text-xs uppercase font-extrabold text-emerald-400 tracking-wider">Winning Targetings (Scale)</p>
-                            {activeAnalysis.winningAdSets.length === 0 ? (
-                              <p className="text-xs text-zinc-500 italic">No ad sets flagged as clear scaling winners yet.</p>
-                            ) : (
-                              <div className="space-y-2">
-                                {activeAnalysis.winningAdSets.map((ws, i) => (
-                                  <div key={i} className="p-3 bg-emerald-500/5 rounded border border-emerald-500/10 space-y-1.5 text-xs">
-                                    <p className="font-bold text-white truncate">{ws.adSetName}</p>
-                                    <div className="flex justify-between text-[10px] text-zinc-400">
-                                      <span>Spent: ${ws.spend.toFixed(0)}</span>
-                                      <span>Orders: {ws.orders}</span>
-                                      <span>CPP: ${ws.cpp.toFixed(2)}</span>
-                                    </div>
-                                    <p className="text-[11px] text-zinc-400"><strong className="text-emerald-400">Scale Plan:</strong> {ws.reason}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Losers */}
-                          <div className="space-y-3">
-                            <p className="text-xs uppercase font-extrabold text-rose-400 tracking-wider">Losing Targetings (Pause)</p>
-                            {activeAnalysis.losingAdSets.length === 0 ? (
-                              <p className="text-xs text-zinc-500 italic">No ad sets flagged as losing bottlenecks.</p>
-                            ) : (
-                              <div className="space-y-2">
-                                {activeAnalysis.losingAdSets.map((ls, i) => (
-                                  <div key={i} className="p-3 bg-rose-500/5 rounded border border-rose-500/10 space-y-1.5 text-xs">
-                                    <p className="font-bold text-white truncate">{ls.adSetName}</p>
-                                    <div className="flex justify-between text-[10px] text-zinc-400">
-                                      <span>Spent: ${ls.spend.toFixed(0)}</span>
-                                      <span>Orders: {ls.orders}</span>
-                                      <span>CPP: ${ls.cpp.toFixed(2)}</span>
-                                    </div>
-                                    <p className="text-[11px] text-rose-400 font-bold uppercase text-[9px]">Issue: {ls.issue}</p>
-                                    <p className="text-[11px] text-zinc-400"><strong className="text-white">Recommendation:</strong> {ls.recommendation}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Strategic Action Plan checklist & daily budget */}
-                      <div className="bg-zinc-900/40 p-6 rounded-xl border border-zinc-900 space-y-6">
-                        <h4 className="font-extrabold text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-2 pb-2 border-b border-zinc-900">
-                          <Brain className="h-4 w-4" />
-                          AI Growth Blueprint & Action Plan
-                        </h4>
-
-                        <div className="grid gap-6 md:grid-cols-2 text-xs">
-                          {/* Immediate 24h & monitor */}
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <h5 className="font-extrabold text-rose-400 uppercase tracking-wider text-[10px]">1. Immediate Operational Action (24h)</h5>
-                              <ul className="list-disc pl-4 space-y-1 text-zinc-300">
-                                {activeAnalysis.actionPlan.immediate.map((item, idx) => <li key={idx}>{item}</li>)}
-                              </ul>
-                            </div>
-                            <div className="space-y-2">
-                              <h5 className="font-extrabold text-amber-400 uppercase tracking-wider text-[10px]">2. Monitor metrics closely (3-7 Days)</h5>
-                              <ul className="list-disc pl-4 space-y-1 text-zinc-300">
-                                {activeAnalysis.actionPlan.monitor.map((item, idx) => <li key={idx}>{item}</li>)}
-                              </ul>
-                            </div>
-                          </div>
-
-                          {/* Scaling & risks */}
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <h5 className="font-extrabold text-emerald-400 uppercase tracking-wider text-[10px]">3. Horizontal/Vertical Scaling blueprint</h5>
-                              <ul className="list-disc pl-4 space-y-1 text-zinc-300">
-                                {activeAnalysis.actionPlan.scaling.map((item, idx) => <li key={idx}>{item}</li>)}
-                              </ul>
-                            </div>
-                            <div className="space-y-2">
-                              <h5 className="font-extrabold text-indigo-400 uppercase tracking-wider text-[10px]">4. Logistical & account operational risks</h5>
-                              <ul className="list-disc pl-4 space-y-1 text-zinc-300">
-                                {activeAnalysis.actionPlan.risk.map((item, idx) => <li key={idx}>{item}</li>)}
-                              </ul>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row justify-between items-center bg-zinc-950 p-4 rounded-lg border border-zinc-900 gap-4 mt-4">
-                          <div className="text-xs">
-                            <p className="font-extrabold text-zinc-300 uppercase tracking-wider text-[10px]">Recommended Testing Daily Budget</p>
-                            <p className="text-zinc-500">AI recommended media spend scaling limit for the next cycle.</p>
-                          </div>
-                          <div className="text-2xl font-black text-indigo-400">
-                            ${activeAnalysis.actionPlan.nextBudget.toFixed(2)}
-                            <span className="text-xs font-normal text-zinc-500">/day</span>
-                          </div>
+                        <div className="p-4 bg-zinc-950 rounded-lg border border-zinc-900 text-xs space-y-1 mt-4">
+                          <p className="font-extrabold text-zinc-300 uppercase tracking-wider text-[10px]">Macro Rationale & Decision Logic</p>
+                          <p className="text-zinc-400 leading-relaxed">{activeAnalysis.actionPlan.reasoning}</p>
                         </div>
                       </div>
                     </div>
