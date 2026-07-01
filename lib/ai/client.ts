@@ -2,11 +2,12 @@ import { z } from "zod";
 import { AIProvider, OpenRouterAIProvider } from "./provider";
 import { AIResponseParser } from "./parser";
 import { AIPromptBuilder } from "./builder";
-import { getActiveModel, FALLBACK_MODEL } from "./config";
+import { getActiveModel, FALLBACK_MODEL, getMaxTokens } from "./config";
 
 export interface AIGenerateOptions {
   model?: string;
   temperature?: number;
+  maxTokens?: number;
   maxRetries?: number;
   timeoutMs?: number;
 }
@@ -29,6 +30,10 @@ export class AIClient {
     const maxRetries = options?.maxRetries ?? 3;
     const timeoutMs = options?.timeoutMs ?? 30000;
 
+    // Resolve, validate, and clamp maxTokens
+    const rawTokens = options?.maxTokens ?? getMaxTokens();
+    const maxTokens = Math.max(256, Math.min(4000, rawTokens));
+
     const preparedUserPrompt = AIPromptBuilder.buildUserPrompt(userPrompt);
 
     try {
@@ -38,6 +43,7 @@ export class AIClient {
         preparedUserPrompt,
         schema,
         temperature,
+        maxTokens,
         maxRetries,
         timeoutMs
       );
@@ -55,6 +61,7 @@ export class AIClient {
           preparedUserPrompt,
           schema,
           temperature,
+          maxTokens,
           1,
           timeoutMs
         );
@@ -71,6 +78,7 @@ export class AIClient {
     userPrompt: string,
     schema: T,
     temperature: number,
+    maxTokens: number,
     maxRetries: number,
     timeoutMs: number
   ): Promise<z.infer<T>> {
@@ -80,13 +88,14 @@ export class AIClient {
     while (attempt < maxRetries) {
       try {
         attempt++;
-        console.log(`[AI Client] Model ${model} execution attempt ${attempt}/${maxRetries}...`);
+        console.log(`[AI Client] Model ${model} execution attempt ${attempt}/${maxRetries} with maxTokens ${maxTokens}...`);
         const response = await this.provider.sendRequest(
           {
             model,
             systemPrompt,
             userPrompt,
             temperature,
+            maxTokens,
           },
           { timeoutMs }
         );

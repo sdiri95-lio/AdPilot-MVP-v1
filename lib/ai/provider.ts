@@ -3,6 +3,7 @@ export interface AIProviderRequest {
   systemPrompt: string;
   userPrompt: string;
   temperature?: number;
+  maxTokens?: number;
 }
 
 export interface AIProviderResponse {
@@ -51,6 +52,7 @@ export class OpenRouterAIProvider implements AIProvider {
           ],
           response_format: { type: "json_object" },
           temperature: request.temperature ?? 0.1,
+          max_tokens: request.maxTokens,
         }),
         signal: controller.signal,
       });

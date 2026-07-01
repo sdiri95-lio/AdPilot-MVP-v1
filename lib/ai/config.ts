@@ -11,3 +11,16 @@ export const getActiveModel = (): string => {
 };
 
 export const FALLBACK_MODEL = AI_MODELS.GEMINI_FLASH;
+
+export const getMaxTokens = (): number => {
+  const envTokens = process.env.AI_MAX_TOKENS;
+  let tokens = 2500;
+  if (envTokens) {
+    const parsed = parseInt(envTokens, 10);
+    if (!isNaN(parsed)) {
+      tokens = parsed;
+    }
+  }
+  // Clamp between 256 and 4000
+  return Math.max(256, Math.min(4000, tokens));
+};
