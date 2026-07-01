@@ -43,6 +43,10 @@ export function ProjectNav({ projectId }: ProjectNavProps) {
       href: `/projects/${projectId}/results`,
     },
     {
+      name: "Ad Intelligence",
+      href: `/projects/${projectId}/ad-intelligence`,
+    },
+    {
       name: "AI Decision",
       href: `/projects/${projectId}/ai-decision`,
     },

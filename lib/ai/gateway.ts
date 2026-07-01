@@ -10,7 +10,8 @@ export type AIFeature =
   | "copy-generator"
   | "profit-calculator"
   | "test-decision"
-  | "import-explanation";
+  | "import-explanation"
+  | "advertising-intelligence";
 
 interface AIModels {
   primary: string;
@@ -43,6 +44,10 @@ const featureModels: Record<AIFeature, AIModels> = {
     fallback: "google/gemini-2.5-flash",
   },
   "import-explanation": {
+    primary: "anthropic/claude-3.5-sonnet",
+    fallback: "google/gemini-2.5-flash",
+  },
+  "advertising-intelligence": {
     primary: "anthropic/claude-3.5-sonnet",
     fallback: "google/gemini-2.5-flash",
   },

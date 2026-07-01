@@ -262,3 +262,205 @@ export function parseFacebookCsv(csvText: string): CsvParseResult {
     },
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hierarchical Node Interfaces
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AdNode {
+  ad_name: string;
+  status: string | null;
+  amount_spent: number;
+  impressions: number;
+  reach: number;
+  frequency: number;
+  link_clicks: number;
+  results: number;
+  cost_per_result: number;
+  ctr: number;
+  cpc: number;
+  cpm: number;
+  purchase_roas: number;
+}
+
+export interface AdSetNode {
+  ad_set_name: string;
+  status: string | null;
+  budget: number | null;
+  budget_type: string | null;
+  amount_spent: number;
+  impressions: number;
+  reach: number;
+  frequency: number;
+  link_clicks: number;
+  results: number;
+  cost_per_result: number;
+  ctr: number;
+  cpc: number;
+  cpm: number;
+  purchase_roas: number;
+  ads: AdNode[];
+}
+
+export interface CampaignNode {
+  campaign_name: string;
+  status: string | null;
+  amount_spent: number;
+  impressions: number;
+  reach: number;
+  frequency: number;
+  link_clicks: number;
+  results: number;
+  cost_per_result: number;
+  ctr: number;
+  cpc: number;
+  cpm: number;
+  purchase_roas: number;
+  adSets: AdSetNode[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hierarchy Builder
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function buildHierarchy(rows: ParsedAdSet[]): CampaignNode[] {
+  const campaignsMap = new Map<string, CampaignNode>();
+  const adSetsMap = new Map<string, Map<string, AdSetNode>>();
+
+  for (const row of rows) {
+    const campaignName = row.campaign_name || "Unknown Campaign";
+    const adSetName = row.ad_set_name;
+    const adName = row.ad_name;
+
+    // 1. Ensure CampaignNode exists
+    if (!campaignsMap.has(campaignName)) {
+      campaignsMap.set(campaignName, {
+        campaign_name: campaignName,
+        status: row.status,
+        amount_spent: 0,
+        impressions: 0,
+        reach: 0,
+        frequency: 0,
+        link_clicks: 0,
+        results: 0,
+        cost_per_result: 0,
+        ctr: 0,
+        cpc: 0,
+        cpm: 0,
+        purchase_roas: 0,
+        adSets: [],
+      });
+      adSetsMap.set(campaignName, new Map<string, AdSetNode>());
+    }
+
+    const campaign = campaignsMap.get(campaignName)!;
+    const campaignAdSets = adSetsMap.get(campaignName)!;
+
+    // If this is campaign-level data only, aggregate directly on the campaign
+    if (!adSetName) {
+      campaign.amount_spent += row.amount_spent;
+      campaign.impressions += row.impressions;
+      campaign.reach += row.reach;
+      campaign.link_clicks += row.link_clicks;
+      campaign.results += row.results;
+      campaign.frequency = Math.max(campaign.frequency, row.frequency);
+      continue;
+    }
+
+    // 2. Ensure AdSetNode exists
+    if (!campaignAdSets.has(adSetName)) {
+      campaignAdSets.set(adSetName, {
+        ad_set_name: adSetName,
+        status: row.status,
+        budget: row.budget,
+        budget_type: row.budget_type,
+        amount_spent: 0,
+        impressions: 0,
+        reach: 0,
+        frequency: 0,
+        link_clicks: 0,
+        results: 0,
+        cost_per_result: 0,
+        ctr: 0,
+        cpc: 0,
+        cpm: 0,
+        purchase_roas: 0,
+        ads: [],
+      });
+    }
+
+    const adSet = campaignAdSets.get(adSetName)!;
+
+    // If this is adset-level data, aggregate on adset
+    if (!adName) {
+      adSet.amount_spent += row.amount_spent;
+      adSet.impressions += row.impressions;
+      adSet.reach += row.reach;
+      adSet.link_clicks += row.link_clicks;
+      adSet.results += row.results;
+      adSet.frequency = Math.max(adSet.frequency, row.frequency);
+      continue;
+    }
+
+    // 3. Create AdNode
+    const adNode: AdNode = {
+      ad_name: adName,
+      status: row.status,
+      amount_spent: row.amount_spent,
+      impressions: row.impressions,
+      reach: row.reach,
+      frequency: row.frequency,
+      link_clicks: row.link_clicks,
+      results: row.results,
+      cost_per_result: row.cost_per_result,
+      ctr: row.ctr,
+      cpc: row.cpc,
+      cpm: row.cpm,
+      purchase_roas: row.purchase_roas,
+    };
+    adSet.ads.push(adNode);
+
+    // Aggregate values to AdSet level
+    adSet.amount_spent += row.amount_spent;
+    adSet.impressions += row.impressions;
+    adSet.reach += row.reach;
+    adSet.link_clicks += row.link_clicks;
+    adSet.results += row.results;
+    adSet.frequency = Math.max(adSet.frequency, row.frequency);
+  }
+
+  // Assemble and recalculate derived metrics for parent nodes
+  const campaigns: CampaignNode[] = [];
+
+  for (const [campaignName, campaign] of campaignsMap.entries()) {
+    const campaignAdSets = adSetsMap.get(campaignName)!;
+
+    for (const adSet of campaignAdSets.values()) {
+      // Re-calculate derived metrics at AdSet level
+      adSet.ctr = adSet.impressions > 0 ? (adSet.link_clicks / adSet.impressions) * 100 : 0;
+      adSet.cpc = adSet.link_clicks > 0 ? adSet.amount_spent / adSet.link_clicks : 0;
+      adSet.cpm = adSet.impressions > 0 ? (adSet.amount_spent / adSet.impressions) * 1000 : 0;
+      adSet.cost_per_result = adSet.results > 0 ? adSet.amount_spent / adSet.results : 0;
+
+      campaign.adSets.push(adSet);
+
+      // Aggregate values to Campaign level from AdSets
+      campaign.amount_spent += adSet.amount_spent;
+      campaign.impressions += adSet.impressions;
+      campaign.reach += adSet.reach;
+      campaign.link_clicks += adSet.link_clicks;
+      campaign.results += adSet.results;
+      campaign.frequency = Math.max(campaign.frequency, adSet.frequency);
+    }
+
+    // Re-calculate derived metrics at Campaign level
+    campaign.ctr = campaign.impressions > 0 ? (campaign.link_clicks / campaign.impressions) * 100 : 0;
+    campaign.cpc = campaign.link_clicks > 0 ? campaign.amount_spent / campaign.link_clicks : 0;
+    campaign.cpm = campaign.impressions > 0 ? (campaign.amount_spent / campaign.impressions) * 1000 : 0;
+    campaign.cost_per_result = campaign.results > 0 ? campaign.amount_spent / campaign.results : 0;
+
+    campaigns.push(campaign);
+  }
+
+  return campaigns;
+}

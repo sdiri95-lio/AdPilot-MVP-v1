@@ -116,6 +116,7 @@ model Project {
   profitAnalyses             ProfitAnalysis[]
   mediaBuyingTests           MediaBuyingTest[]
   timelineEvents             ProjectTimelineEvent[]
+  advertisingAnalyses        AdvertisingAnalysis[]
 
   productVideos   Json?
   supplierLink    String?
@@ -299,6 +300,7 @@ model CsvUpload {
   isWinning         Boolean?
   recommendations   Json?
   createdAt         DateTime         @default(now())
+  advertisingAnalysis AdvertisingAnalysis?
 
   @@index([projectId])
 }
@@ -491,4 +493,32 @@ model CountryNote {
 
   @@unique([userId, country])
   @@index([userId])
+}
+
+model AdvertisingAnalysis {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  csvUploadId String?     @unique
+  csvUpload   CsvUpload?  @relation(fields: [csvUploadId], references: [id], onDelete: SetNull)
+
+  // AI Analysis Metrics
+  campaignHealthScore Int
+  overallDecision     String // SCALE | OPTIMIZE | RETEST | KILL
+  confidenceScore     Int
+
+  // Structured breakdowns stored as JSON
+  creativeRanking     Json // Array of sorted creatives with insights
+  winningAdSets       Json // Array of high-performing ad sets
+  losingAdSets        Json // Array of low-performing ad sets
+  fatigueWarnings     Json // Creative frequency / wear-out warnings
+  businessIntel       Json // True profit, margin, break-even CPL/CPA, projected run-rate
+  optimizationActions Json // Direct, actionable recommendations with reasoning
+  actionPlan          Json // Structured immediate, monitor, and scaling task lists
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
 }

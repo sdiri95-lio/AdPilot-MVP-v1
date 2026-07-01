@@ -8,6 +8,7 @@ import {
   copyGeneratorAiSchema,
   testDecisionAiSchema,
   importExplanationAiSchema,
+  advertisingIntelligenceAiSchema,
 } from "@/lib/ai/schemas";
 import { systemContext } from "@/prompts/system-context";
 import { productAnalyzerPrompt } from "@/prompts/product-analyzer";
@@ -16,6 +17,7 @@ import { testStrategyPrompt } from "@/prompts/test-strategy";
 import { adCopyPrompt } from "@/prompts/ad-copy";
 import { testDecisionPrompt } from "@/prompts/test-decision";
 import { importExplanationPrompt } from "@/prompts/import-explanation";
+import { advertisingIntelligencePrompt } from "@/prompts/advertising-intelligence";
 import { calculateProfitMetrics } from "@/lib/ai/profit-calculator";
 
 const gateway = new AIGateway();
@@ -142,6 +144,27 @@ export async function POST(req: Request) {
             data.avgTrueProfit
           ),
           schema: importExplanationAiSchema,
+        });
+        break;
+
+      case "advertising-intelligence":
+        result = await gateway.generate({
+          userId: user.id,
+          feature,
+          systemPrompt: systemContext,
+          userPrompt: advertisingIntelligencePrompt(
+            data.productName,
+            data.sellingPrice,
+            data.productCost,
+            data.targetCountry,
+            data.deliveryRate,
+            data.confirmationRate,
+            data.returnRate,
+            data.shippingCost,
+            data.returnFee,
+            data.hierarchyJson
+          ),
+          schema: advertisingIntelligenceAiSchema,
         });
         break;
 

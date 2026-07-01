@@ -82,3 +82,73 @@ export const importExplanationAiSchema = z.object({
 });
 
 export type ImportExplanationAiResult = z.infer<typeof importExplanationAiSchema>;
+
+export const advertisingIntelligenceAiSchema = z.object({
+  campaignHealthScore: z.number().int().min(0).max(100).describe("0-100 overall score of campaign health."),
+  overallDecision: z.enum(["SCALE", "OPTIMIZE", "RETEST", "KILL"]).describe("The macro scaling/optimization decision."),
+  confidenceScore: z.number().int().min(0).max(100).describe("0-100 confidence score in the AI analysis."),
+  
+  creativeRanking: z.array(z.object({
+    adName: z.string().describe("The name of the ad creative."),
+    rank: z.number().int().min(1).describe("Performance rank (1 being best)."),
+    status: z.enum(["WINNER", "AVERAGE", "LOSER"]).describe("Performance classification."),
+    ctr: z.number().describe("CTR (all) in %."),
+    spend: z.number().describe("Amount spent on this ad."),
+    orders: z.number().describe("Number of orders generated."),
+    insights: z.string().describe("AI insights explaining its performance.")
+  })).describe("Creative performance rankings and analysis."),
+
+  winningAdSets: z.array(z.object({
+    adSetName: z.string().describe("Name of the ad set."),
+    spend: z.number().describe("Amount spent."),
+    orders: z.number().describe("Orders generated."),
+    cpp: z.number().describe("Cost per purchase."),
+    roas: z.number().describe("Standard Facebook ROAS."),
+    scalingPotential: z.enum(["HIGH", "MEDIUM", "LOW"]).describe("Scaling potential rating."),
+    reason: z.string().describe("Why this ad set is considered a winner.")
+  })).describe("Successful ad sets recommended for scaling."),
+
+  losingAdSets: z.array(z.object({
+    adSetName: z.string().describe("Name of the ad set."),
+    spend: z.number().describe("Amount spent."),
+    orders: z.number().describe("Orders generated."),
+    cpp: z.number().describe("Cost per purchase."),
+    roas: z.number().describe("Standard Facebook ROAS."),
+    issue: z.string().describe("Primary bottleneck identified (e.g. high CPM, low CTR)."),
+    recommendation: z.string().describe("Recommended corrective action (e.g. pause, replace creatives).")
+  })).describe("Underperforming ad sets needing optimization."),
+
+  fatigueWarnings: z.array(z.object({
+    targetName: z.string().describe("Campaign, Ad Set, or Ad Name."),
+    frequency: z.number().describe("Frequency value."),
+    warningType: z.enum(["HIGH_FREQUENCY", "CPM_SPIKE", "ROAS_DROP"]).describe("Type of warning."),
+    remedy: z.string().describe("Actionable fix to resolve fatigue.")
+  })).describe("Audience and creative wear-out alerts."),
+
+  businessIntel: z.object({
+    trueProfit: z.number().describe("Calculated true profit after COD adjustments."),
+    netMargin: z.number().describe("Net margin percentage."),
+    breakEvenCpa: z.number().describe("Break-even CPA."),
+    breakEvenCpp: z.number().describe("Break-even CPP."),
+    maxAcceptableCpc: z.number().describe("Maximum CPC threshold."),
+    maxAcceptableCpm: z.number().describe("Maximum CPM threshold."),
+    projectedMonthlyProfit: z.number().describe("Projected monthly profit based on current run rate."),
+    cashFlow: z.string().describe("Cashflow status analysis and constraints.")
+  }).describe("Economics and cashflow indicators."),
+
+  optimizationActions: z.array(z.object({
+    action: z.string().describe("The exact action to perform (e.g., 'Pause Ad Set B')."),
+    priority: z.enum(["HIGH", "MEDIUM", "LOW"]).describe("Priority order."),
+    rationale: z.string().describe("Detailed reasoning analyzing CTR, CPP, CPM, etc.")
+  })).describe("Direct operational optimization rules."),
+
+  actionPlan: z.object({
+    immediate: z.array(z.string()).min(1).describe("Action items to execute today."),
+    monitor: z.array(z.string()).min(1).describe("Metrics or targets to track over next 3-7 days."),
+    scaling: z.array(z.string()).min(1).describe("Suggested horizontal/vertical scaling steps."),
+    risk: z.array(z.string()).min(1).describe("Operational/capital risk flags to manage."),
+    nextBudget: z.number().describe("Recommended daily budget for next test phase.")
+  }).describe("Strategic roadmap for next operational cycle.")
+});
+
+export type AdvertisingIntelligenceAiResult = z.infer<typeof advertisingIntelligenceAiSchema>;
